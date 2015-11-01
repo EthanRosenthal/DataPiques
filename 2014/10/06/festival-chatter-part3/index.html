@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title>Data Piques | Archives</title>
-    <link rel="shortcut icon" type="image/png" href="./favicon.png">
-    <link rel="shortcut icon" type="image/x-icon" href="./favicon.ico">
+        <meta charset="utf-8" />
+    <title>Data Piques | Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension</title>
+    <link rel="shortcut icon" type="image/png" href="../../../../favicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.ico">
      
 <style type="text/css">
 /*!
@@ -201,69 +201,298 @@ jQuery(document).ready(function($) {
 </script>
 
 
-    <link rel="stylesheet" href="./theme/css/screen.css" type="text/css" />
-    <link rel="stylesheet" href="./theme/css/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="./theme/css/print.css" type="text/css" media="print" />
+    <link rel="stylesheet" href="../../../../theme/css/screen.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../theme/css/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../theme/css/print.css" type="text/css" media="print" />
     <meta name="generator" content="Pelican" />
+
 </head>
 <body>
     <header>
         <nav>
             <ul>
-                <li><a href=".">Home</a></li>
+                <li><a href="../../../..">Home</a></li>
                 <li><a href="/archives.html">Archives</a></li>
                 <li><a href="/pages/about.html">About</a></li>
                 <li><a href="http://www.ethanrosenthal.com">Website</a></li>
             </ul>
         </nav>
         <div class="header_box">
-            <h1><a href=".">Data Piques</a></h1>
+            <h1><a href="../../../..">Data Piques</a></h1>
         </div>
     </header>
     <div id="wrapper">
-        <div id="content">
-    <h1>Archives</h1>
+        <div id="content">            <h4 class="date">Oct 06, 2014</h4>
+
+            <article class="post">
+                <h2 class="title">
+                    <a href="../../../../2014/10/06/festival-chatter-part3/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension&quot;">Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension</a>
+                </h2>
+
+                <p>In this series of posts (<a href="../../../../2014/08/31/festival-chatter-part1/">part 1</a>, <a href="../../../../2014/09/09/festival-chatter-part2/">part 2</a>), I have been showing how to use Python and other data scientist tools to analyze a collection of tweets related to the 2014 Bonnaroo Music and Arts Festival. So far, the investigation has been limited to summary data of the full dataset. The beauty of Twitter is that it occurs in realtime, so we can now peer into the fourth dimension and learn about these tweets as a function of time.</p>
+<h2>More Organic</h2>
+<p>Before we view the Bonnaroo tweets as a time series, I would like to make a quick comment about the organic-ness of the tweets. If you recall from the previous <a href="../../../../2014/09/09/festival-chatter-part2/">post</a>, I removed duplicates and retweets from my collection in order to make the tweet database more indicative of true audience reactions. On further investigation, it seems that there were many spammy media sources still in the collection. To make the tweets even more organic, I decided to look at the source of the tweets.</p>
+<p>Because Kanye West was the most popular artist from the previous posts' analysis, I decided to look at the top 15 sources that mentioned him:</p>
+<div class="highlight"><pre><span class="n">twitterfeed</span>                    <span class="mi">1585</span>
+<span class="n">dlvr</span><span class="p">.</span><span class="n">it</span>                         <span class="mi">749</span>
+<span class="n">Twitter</span> <span class="k">for</span> <span class="n">iPhone</span>              <span class="mi">366</span>
+<span class="n">IFTTT</span>                           <span class="mi">256</span>
+<span class="n">Hootsuite</span>                       <span class="mi">201</span>
+<span class="n">Twitter</span> <span class="k">for</span> <span class="n">Websites</span>            <span class="mi">188</span>
+<span class="n">Twitter</span> <span class="n">Web</span> <span class="n">Client</span>              <span class="mi">127</span>
+<span class="n">Facebook</span>                        <span class="mi">120</span>
+<span class="n">Twitter</span> <span class="k">for</span> <span class="n">Android</span>             <span class="mi">119</span>
+<span class="n">WordPress</span><span class="p">.</span><span class="n">com</span>                   <span class="mi">102</span>
+<span class="n">Tumblr</span>                           <span class="mi">81</span>
+<span class="n">Instagram</span>                        <span class="mi">73</span>
+<span class="n">iOS</span>                              <span class="mi">42</span>
+<span class="n">TweetDeck</span>                        <span class="mi">38</span>
+<span class="n">TweetAdder</span> <span class="n">v4</span>                    <span class="mi">37</span>
+</pre></div>
 
 
-            <h4 class="date">Oct 2015</h4>
-            <div class="post archives">
-                <ul>
-                    <li><a href="./2015/10/06/interviews-to-job/">Yet Another PhD to Data Science Post (Part III)</a></li>
-                </ul>
-            </div>
-            <h4 class="date">Sep 2015</h4>
-            <div class="post archives">
-                <ul>
-                    <li><a href="./2015/09/29/insight-to-interviews/">Yet Another PhD to Data Science Post (Part II)</a></li>
-                    <li><a href="./2015/09/23/start-to-insight/">Yet Another PhD to Data Science Post (Part I)</a></li>
-                </ul>
-            </div>
-            <h4 class="date">Nov 2014</h4>
-            <div class="post archives">
-                <ul>
-                    <li><a href="./2014/11/25/festival-chatter-part4/">Festival Chatter (Part 4) - Some Simple Sentiment Analysis</a></li>
-                </ul>
-            </div>
-            <h4 class="date">Oct 2014</h4>
-            <div class="post archives">
-                <ul>
-                    <li><a href="./2014/10/06/festival-chatter-part3/">Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension</a></li>
-                </ul>
-            </div>
-            <h4 class="date">Sep 2014</h4>
-            <div class="post archives">
-                <ul>
-                    <li><a href="./2014/09/09/festival-chatter-part2/">Festival Chatter (Part 2) - Evaluating Band Popularity from Bonnaroo Tweets</a></li>
-                </ul>
-            </div>
-            <h4 class="date">Aug 2014</h4>
-            <div class="post archives">
-                <ul>
-                    <li><a href="./2014/08/31/festival-chatter-part1/">Festival Chatter (Part 1) - Collecting Bonnaroo Tweets from the Streaming Twitter API</a></li>
-                    <li><a href="./2014/08/22/hello-world/">Setting up a website and separate blog repository hosted on GitHub</a></li>
-                </ul>
-            </div>
+<p>twitterfeed and dlvr.it are social media platforms for deploying mass tweets, and a look at some of these tweets reveals this fact. So, I decided to create a list of "organic sources", which consists of mobile Twitter clients, and use these to cull the tweet collection</p>
+<div class="highlight"><pre><span class="n">organic_sources</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Twitter for iPhone&#39;</span><span class="p">,</span> <span class="s">&#39;Twitter Web Client&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;Facebook&#39;</span><span class="p">,</span> <span class="s">&#39;Twitter for Android&#39;</span><span class="p">,</span> <span class="s">&#39;Instagram&#39;</span><span class="p">]</span>
+<span class="n">organics</span> <span class="o">=</span> <span class="n">organics</span><span class="p">[</span><span class="n">organics</span><span class="p">[</span><span class="s">&#39;source&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">organic_sources</span><span class="p">)]</span>
+</pre></div>
 
+
+<p>With this new dataset, I re-ran the band popularity histogram from the previous post, and I was surprised to see that Kanye got bumped down to third place! It looks like Kanye's popular with the media, but Jack White and Elton John were more popular with the Bonnaroo audience.</p>
+<p><img alt="New Top Ten Bands" src="../../../../assets/img/bandPop_top10_orig_sources.png" /></p>
+<h2>4th Dimensional <a href="http://youtu.be/5vwV6htrjVY">Transition</a></h2>
+<p>Let's now look at the time dependence of the tweets. For this, we would like to use the <code>created_at</code> field as our index and tell pandas to treat its elements as datetime objects.</p>
+<div class="highlight"><pre><span class="c"># Clean up field</span>
+<span class="n">organics</span><span class="p">[</span><span class="s">&#39;created_at&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">tweetTime</span><span class="p">[</span><span class="s">&#39;$date&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">tweetTime</span> <span class="ow">in</span> <span class="n">organics</span><span class="p">[</span><span class="s">&#39;created_at&#39;</span><span class="p">]]</span>
+
+<span class="n">organics</span><span class="p">[</span><span class="s">&#39;created_at&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">Series</span><span class="p">(</span><span class="n">organics</span><span class="p">[</span><span class="s">&#39;created_at&#39;</span><span class="p">]))</span>
+<span class="n">organics</span> <span class="o">=</span> <span class="n">organics</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">&#39;created_at&#39;</span><span class="p">,</span><span class="n">drop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">organics</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">organics</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s">&#39;UTC&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s">&#39;EST&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>To look at the number of tweets per hour, we have to resample our tweet collection.</p>
+<div class="highlight"><pre><span class="n">ts_hist</span> <span class="o">=</span> <span class="n">organics</span><span class="p">[</span><span class="s">&#39;created_at&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s">&#39;60t&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s">&#39;count&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>The majority of my time spent creating this blog post consisted of fighting with <em>matplotlib</em> trying to get decent looking plots. I thought it would be cool to try to make a "<a href="http://matplotlib.org/users/recipes.html">fill between</a>" plot, which took way longer to figure out than it should have. The key is that <code>fill_between</code> takes 3 inputs: an array for the x-axis and two y-axis arrays between which the function fills color. If one just wants to plot a regular curve and fill to the x-axis, one must create an array of zeros that is the same length as the curve. Also, I get pretty confused with which commands should be called with ax, plt, and fig. Anyway, the code and corresponding figure are below.</p>
+<div class="highlight"><pre> <span class="c"># Prettier pandas plot settings</span>
+ <span class="c"># Not sure why &#39;default&#39; is not the default...</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">mpl_style</span><span class="o">=</span><span class="s">&#39;default&#39;</span>
+<span class="n">x_date</span> <span class="o">=</span> <span class="n">tshist</span><span class="o">.</span><span class="n">index</span>
+<span class="n">zero_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_date</span><span class="p">))</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">x_date</span><span class="p">,</span> <span class="n">zero_line</span><span class="p">,</span> <span class="n">ts_hist</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s">&#39;blue&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="c"># Format plot</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_xticklabels</span><span class="p">(),</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">family</span><span class="o">=</span><span class="s">&#39;sans-serif&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_yticklabels</span><span class="p">(),</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">family</span><span class="o">=</span><span class="s">&#39;sans-serif&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Date&#39;</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Counts&#39;</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+
+<p><img alt="Tweets per Hour" src="../../../../assets/img/tweet_count_ts.png" /></p>
+<p>As you can see, tweet frequency was pretty consistent during each day of the festival and persisted until the early hours of each morning.</p>
+<h2>Band Popularity Time Series</h2>
+<p>We can now go back to questions from the previous post and look at how the top five bands' popularity changed with time. Using my program from the previous post, <code>buildMentionHist</code>, we can add a column for each band to our existing <code>organics</code> dataframe. Each row of the bands' columns will contain a True or False value corresponding to whether or not the artist was mentioned in the tweet. We resample the columns like above but do this in bins of 10 minutes.</p>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">buildMentionHist</span> <span class="kn">as</span> <span class="nn">bmh</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="s">&#39;bonnaroooAliasList.json&#39;</span>
+<span class="n">alias_dict</span> <span class="o">=</span> <span class="p">[</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">bandPop</span> <span class="o">=</span> <span class="n">organics</span><span class="p">[</span><span class="s">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">bmh</span><span class="o">.</span><span class="n">build_apply_fun</span><span class="p">(</span><span class="n">alias_dict</span><span class="p">),</span>
+                                 <span class="n">alias_dict</span><span class="p">)</span>
+<span class="n">top_five</span> <span class="o">=</span> <span class="n">bandPop</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()[:</span><span class="mi">5</span><span class="p">]</span> <span class="c"># Get top five artists&#39; names</span>
+<span class="n">bandPop</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">organics</span><span class="p">,</span> <span class="n">bandPop</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">top_five_ts</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">top_five</span><span class="p">:</span>
+    <span class="n">top_five_ts</span><span class="p">[</span><span class="n">band</span><span class="p">]</span> <span class="o">=</span> <span class="n">bandPop</span><span class="p">[</span><span class="n">bandPop</span><span class="p">[</span><span class="n">band</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">][</span><span class="s">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s">&#39;10min&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s">&#39;count&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>We now have a dataframe called <code>top_five_ts</code> that contains the time series information for the top five most popular bands at Bonnaroo. All we have to do now is plot these time series. I wanted to again make some fill between plots but with different colors for each band. I used the <a href="http://olgabot.github.io/prettyplotlib/">prettyplotlib</a> library to help with this because it has nicer looking default colors. I plot both the full time series and a "zoomed-in" time series that is closer to when the artists' popularities peaked on Twitter. I ran into a lot of trouble trying to get the dates and times formatted correctly on the x-axis of the zoomed-in plot, so I have included that code below. There is probably a better way to do it, but at least this finally worked.</p>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">pytz</span>
+<span class="kn">import</span> <span class="nn">prettyplotlib</span> <span class="kn">as</span> <span class="nn">ppl</span>
+<span class="kn">from</span> <span class="nn">prettyplotlib</span> <span class="kn">import</span> <span class="n">brewer2mpl</span>
+
+<span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">top_five_ts</span><span class="p">:</span>
+    <span class="n">ppl</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">top_five_ts</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="mf">0.</span><span class="p">,</span><span class="n">top_five_ts</span><span class="p">[</span><span class="n">band</span><span class="p">])</span>
+
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gcf</span><span class="p">()</span>
+<span class="n">set2</span> <span class="o">=</span> <span class="n">brewer2mpl</span><span class="o">.</span><span class="n">get_map</span><span class="p">(</span><span class="s">&#39;Set2&#39;</span><span class="p">,</span><span class="s">&#39;qualitative&#39;</span><span class="p">,</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">mpl_colors</span>
+
+<span class="c"># Note: have to make legend by hand for fill_between plots.</span>
+<span class="c"># BEGIN making legend</span>
+<span class="k">for</span> <span class="n">color</span> <span class="ow">in</span> <span class="n">set2</span><span class="p">:</span>
+    <span class="n">legendProxies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">Rectangle</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">fc</span><span class="o">=</span><span class="n">color</span><span class="p">))</span>
+
+<span class="n">leg</span> <span class="o">=</span> <span class="n">legend</span><span class="p">(</span><span class="n">legendProxies</span><span class="p">,</span> <span class="n">topfive</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">leg</span><span class="o">.</span><span class="n">draw_frame</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+<span class="c"># END making legend</span>
+
+
+<span class="c"># BEGIN formatting xaxis</span>
+<span class="n">datemin</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">13</span><span class="p">,</span><span class="mi">12</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">datemax</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">16</span><span class="p">,</span><span class="mi">12</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">est</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="s">&#39;EST&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="n">est</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="n">datemin</span><span class="p">),</span> <span class="n">est</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="n">datemax</span><span class="p">),</span>  <span class="mi">0</span><span class="p">,</span> <span class="mi">80</span><span class="p">])</span>
+<span class="n">fmt</span> <span class="o">=</span> <span class="n">dates</span><span class="o">.</span><span class="n">DateFormatter</span><span class="p">(</span><span class="s">&#39;%m/</span><span class="si">%d</span><span class="s"> %H:%M&#39;</span><span class="p">,</span><span class="n">tz</span><span class="o">=</span><span class="n">est</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_formatter</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_tick_params</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s">&#39;out&#39;</span><span class="p">)</span>
+<span class="c"># END formatting xaxis</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Date&#39;</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Counts&#39;</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Here is the full time series:</p>
+<p><img alt="Top Five TS Popularity" src="../../../../assets/img/topfive_tweet_ts.png" /></p>
+<p>And here is the zoomed-in time series:</p>
+<p><img alt="Top Five TS Popularity Zoom" src="../../../../assets/img/topfive_tweet_ts_zoom.png" /></p>
+<p>If we look at when each band went on stage, we can see that each bands' popularity spiked while they were performing. This is good - it looks like we are measuring truly "organic" interest on Twitter!</p>
+<table>
+<thead>
+<tr>
+<th><strong>Band</strong></th>
+<th><strong>Performance Time</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jack White</td>
+<td>6/14 10:45PM - 12:15AM</td>
+</tr>
+<tr>
+<td>Elton John</td>
+<td>6/15 9:30PM - 11:30PM</td>
+</tr>
+<tr>
+<td>Kanye West</td>
+<td>6/13 10:00PM - 12:00AM</td>
+</tr>
+<tr>
+<td>Skrillex</td>
+<td>6/14 1:30AM - 3:30AM</td>
+</tr>
+<tr>
+<td>Vampire Weekend</td>
+<td>6/13 7:30PM - 8:45PM</td>
+</tr>
+</tbody>
+</table>
+<h2>Delving into the Text</h2>
+<p>Up until now, I have not looked too much about the actual text of the tweets other than to find a mention of an artist. Using the <em>nltk</em> library, we can learn a little more about some general qualities of the text. The simplest quantity is looking at the most frequently used words. To do this, I go through every tweet and break all of the words up into individual elements of a list. In the language of natural language processing, we are "tokenizing" the text. Common english stopwords are omitted, as well as any mentions of the artists or artists' aliases. I use a regular expression code to only grab words from the sentences and ignore punctuation (except for apostrophes). I also take our <code>alias_dict</code> from the previous post and make sure that those words are not collected when tokenizing the tweets.</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">nltk.tokenize</span> <span class="kn">import</span> <span class="n">RegexpTokenizer</span>
+<span class="kn">from</span> <span class="nn">nltk.corpus</span> <span class="kn">import</span> <span class="n">stopwords</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="k">def</span> <span class="nf">custom_tokenize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">custom_words</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">clean_custom_words</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This routine takes an input &quot;text&quot; and strips punctuation</span>
+<span class="sd">    (except apostrophes), converts each words to lowercase,</span>
+<span class="sd">    removes standard english stopwords, removes a set of</span>
+<span class="sd">    custom_words (optional), and returns a list of all of the</span>
+<span class="sd">    leftover words.</span>
+
+<span class="sd">    INPUTS:</span>
+<span class="sd">    text = text string that one wants to tokenize</span>
+<span class="sd">    custom_words = custom list or dictionary of words to omit</span>
+<span class="sd">                    from the tokenization.</span>
+<span class="sd">    clean_custom_world = Flag as True if you want to clean</span>
+<span class="sd">                            these words.</span>
+<span class="sd">                         Flag as False if mapping this function</span>
+<span class="sd">                            to many keys. In that case,</span>
+<span class="sd">                            pre-clean the words before running</span>
+<span class="sd">                            this function.</span>
+<span class="sd">    OUTPUTS:</span>
+<span class="sd">    words = This is a list of the tokenized version of each word</span>
+<span class="sd">            that was in &quot;text&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">RegexpTokenizer</span><span class="p">(</span><span class="s">r&quot;[\w&#39;]+&quot;</span><span class="p">)</span>
+    <span class="n">stop_url</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">r&#39;http[^</span><span class="se">\\</span><span class="s">s]+&#39;</span><span class="p">)</span>
+    <span class="n">stops</span> <span class="o">=</span> <span class="n">stopwords</span><span class="o">.</span><span class="n">words</span><span class="p">(</span><span class="s">&#39;english&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">clean_custom_words</span><span class="p">:</span>
+        <span class="n">custom_words</span> <span class="o">=</span> <span class="n">tokenize_custom_words</span><span class="p">(</span><span class="n">custom_words</span><span class="p">)</span>
+
+    <span class="n">words</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">stop_url</span><span class="p">,</span> <span class="n">w</span><span class="p">)]</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">words</span><span class="p">))</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span> <span class="k">if</span> <span class="n">w</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stops</span> <span class="ow">and</span> <span class="n">w</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">custom_words</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">words</span>
+
+<span class="k">def</span> <span class="nf">tokenize_custom_words</span><span class="p">(</span><span class="n">custom_words</span><span class="p">):</span>
+    <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">RegexpTokenizer</span><span class="p">(</span><span class="s">r&quot;[\w&#39;]+&quot;</span><span class="p">)</span>
+    <span class="n">custom_tokens</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">stops</span> <span class="o">=</span> <span class="n">stopwords</span><span class="o">.</span><span class="n">words</span><span class="p">(</span><span class="s">&#39;english&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">custom_words</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span> <span class="c"># Useful for alias_dict</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">custom_words</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="n">k_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">k</span><span class="o">.</span><span class="n">split</span><span class="p">()</span> <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stops</span><span class="p">]</span>
+            <span class="c"># Remove all punctuation</span>
+            <span class="n">k_tokens</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">k_tokens</span><span class="p">))</span>
+            <span class="c"># Remove apostrophes</span>
+            <span class="n">k_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&#39;&quot;</span><span class="p">,</span><span class="s">&quot;&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">k_tokens</span><span class="p">]</span>
+            <span class="c"># Below takes care of nested lists, then tokenizes</span>
+            <span class="n">v_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">word</span> <span class="k">for</span> <span class="n">listwords</span> <span class="ow">in</span> <span class="n">v</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">listwords</span><span class="p">]</span>
+            <span class="n">v_tokens</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v_tokens</span><span class="p">))</span>
+            <span class="c"># Remove apostrophes</span>
+            <span class="n">v_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&#39;&quot;</span><span class="p">,</span><span class="s">&quot;&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">v_tokens</span><span class="p">]</span>
+            <span class="n">custom_tokens</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">k_tokens</span><span class="p">)</span>
+            <span class="n">custom_tokens</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">v_tokens</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">custom_words</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="n">custom_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">words</span><span class="p">)</span> <span class="k">for</span> <span class="n">words</span> <span class="ow">in</span> <span class="n">custom_words</span><span class="p">]</span>
+        <span class="n">custom_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">words</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&#39;&quot;</span><span class="p">,</span><span class="s">&quot;&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">words</span> <span class="ow">in</span> <span class="n">custom_tokens</span><span class="p">]</span>
+
+    <span class="n">custom_tokens</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">custom_tokens</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">custom_tokens</span>
+</pre></div>
+
+
+<p>Using the above code, I can apply the <code>custom_tokenize</code> function to each row of my <code>organics</code> dataframe. Before doing this, though, I make sure to run the <code>tokenize_custom_words</code> function on the alias dictionary. Otherwise, I would end up cleaning the aliases for every row in the dataframe which is a waste of time.</p>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">custom_tokenize</span> <span class="kn">as</span> <span class="nn">tk</span>
+
+<span class="n">clean_aliases</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">tokenize_custom_words</span><span class="p">(</span><span class="n">alias_dict</span><span class="p">)</span>
+<span class="n">token_df</span> <span class="o">=</span> <span class="n">organics</span><span class="p">[</span><span class="s">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">custom_tokenize</span><span class="p">,</span>
+                                  <span class="n">custom_words</span><span class="o">=</span><span class="n">clean_aliases</span><span class="p">,</span>
+                                  <span class="n">clean_custom_words</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Lastly, I collect all of the tokens into one giant list and use the <code>FreqDist</code> <em>nltk</em> function to get the word frequency distribution.</p>
+<div class="highlight"><pre><span class="c"># Need to flatten all tokens into one big list:</span>
+<span class="n">big_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">y</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">token_df</span><span class="o">.</span><span class="n">values</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">x</span><span class="p">]</span>
+<span class="n">distr</span> <span class="o">=</span> <span class="n">nltk</span><span class="o">.</span><span class="n">FreqDist</span><span class="p">(</span><span class="n">big_tokens</span><span class="p">)</span>
+<span class="n">distr</span> <span class="o">=</span> <span class="n">distr</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;bonnaroo&#39;</span><span class="p">)</span> <span class="c"># Obviously highest frequency</span>
+<span class="n">distr</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span>
+</pre></div>
+
+
+<p><img alt="Word Frequency Distribution" src="../../../../assets/img/token_freq.png" /></p>
+<p>A couple things caught my eye - the first being that people like to talk about themseleves (see popularity of " i'm "). Also it was pretty popular to misspell "Bonnaroo" (see popularity of " bonaroo "). I wanted to see if there was any correlation between mispellings and maybe people being intoxicated at night, but the time series behavior of the mispellings looks similar in shape (though not magnitude) to the full tweet time series that is plotted earlier in the post.</p>
+<div class="highlight"><pre><span class="n">misspell</span> <span class="o">=</span> <span class="n">token_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s">&#39;bonaroo&#39;</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span>
+<span class="n">misspell</span> <span class="o">=</span> <span class="n">misspell</span><span class="p">[</span><span class="n">misspell</span><span class="p">]</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s">&#39;60t&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s">&#39;count&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p><img alt="Misspelling Time Series" src="../../../../assets/img/misspell_bonaroo_ts.png" /></p>
+<p>The other thing that interested me was the the word "best" was one of the top 25 most frequent words. Assuming that "best" correlates with happiness, we can see that people got happier and happier as the festival progressed:</p>
+<p><img alt="&quot;Best&quot; Time Series" src="../../../../assets/img/best_ts.png" /></p>
+<p>This is, of course, a fairly simplistic measure of text sentiment. In my next post, I would like to quantify more robust measures of Bonnaroo audience sentiment.</p>
+<p>By the way, the code used in this whole series on Bonnaroo is available on my <a href="https://github.com/EthanRosenthal/festival-chatter">GitHub</a>.</p>
+                <div class="clear"></div>
+
+                <div class="info">
+                    <a href="../../../../2014/10/06/festival-chatter-part3/">posted on Oct 06, 2014</a>
+                </div>
+            </article>
             <div class="clear"></div>
             <footer>
                 <p>
