@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+    <title>Data Piques | Festival Chatter (Part 4) - Some Simple Sentiment Analysis</title>
+    <link rel="shortcut icon" type="image/png" href="/favicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/theme/css/screen.css" type="text/css" />
+    <link rel="stylesheet" href="/theme/css/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="/theme/css/print.css" type="text/css" media="print" />
+    <meta name="generator" content="Pelican" />
+
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="">Home</a></li>
+                <li><a href="/archives.html">Archives</a></li>
+                <li><a href="http://www.ethanrosenthal.com">Home Page</a></li>
+            </ul>
+        </nav>
+        <div class="header_box">
+            <h1><a href="">Data Piques</a></h1>
+        </div>
+    </header>
+    <div id="wrapper">
+        <div id="content">            <h4 class="date">Nov 25, 2014</h4>
+
+            <article class="post">
+                <h2 class="title">
+                    <a href="/festival-chatter-part-4-some-simple-sentiment-analysis.html" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 4) - Some Simple Sentiment Analysis&quot;">Festival Chatter (Part 4) - Some Simple Sentiment Analysis</a>
+                </h2>
+
+                <p>I think this post will probably conclude my Festival Chatter series on analyzing Bonnaroo tweets in Python (<a href="{% post_url 2014-08-31-festival-chatter-part1 %}">part 1</a>, <a href="{% post_url 2014-09-09-festival-chatter-part2 %}">part 2</a>, <a href="{% post_url 2014-10-6-festival-chatter-part3 %}">part 3</a>). I've had a lot of fun messing around with this dataset, but I think it's time to move on to playing with something else. For this last post, though, I will show some simple <a href="http://en.wikipedia.org/wiki/Sentiment_analysis">sentiment analysis</a> of the collected tweets. There are a whole bunch of issues with this method of sentiment analysis. I'll mention some of these after presenting the findings.</p>
+<h2>Words to Numbers</h2>
+<p>The sentiment analysis used here consists of associating a number with an English word where the value of the number corresponds to how "positive" or "negative" the word seems. Presumably, I could go through the dictionary and subjectively assign numbers to words, but thankfully somebody else has less of a life than me (maybe). So, if you click <a href="http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=6010">here</a>, you can download a tab-separated text file called <code>AFINN-111.txt</code> that contains a dictionary of 2477 words and associated integer sentiment score. Larger positive (negative) values correspond to more positive (negative) sentiment. On a total side note, I often see versions of my previous sentence in scientific papers where one attempts to describe two often opposing concepts and puts the antonyms in parentheses in order to save space. I wonder if there is a name for this "literary device"? Anyway, good words like "love" get a value of +3 on the sentiment score, while hate is worth -3.</p>
+<p>I wrote a small script <code>calculate_sentiment.py</code> that reads in <code>AFINN-111.txt</code> and calculates the sentiment score of every tweet. This score is just the sum of the sentiment scores for all words in the tweet that are also in the dictionary. I originally wrote this script for a homework assignment from the Coursera <a href="https://www.coursera.org/course/datasci">Introduction to Data Science</a> course. Things like separating the scores into "positive" and "negative" buckets are unnecessary now and just left over from the assignment.</p>
+<div class="highlight"><pre><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Calculate tweet sentiment from tweet DataFrame</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">Series</span>
+
+
+<span class="k">def</span> <span class="nf">get_sentiment_dict</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot; Load in sentiment file AFINN-111 as dictionary &quot;&quot;&quot;</span>
+
+    <span class="n">sent_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;AFINN-111.txt&#39;</span><span class="p">)</span>
+    <span class="n">sentiment_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">sent_file</span><span class="p">:</span>
+      <span class="n">term</span><span class="p">,</span> <span class="n">score</span>  <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span><span class="p">)</span>
+      <span class="n">sentiment_dict</span><span class="p">[</span><span class="n">term</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">sentiment_dict</span>
+
+<span class="k">def</span> <span class="nf">get_tweet_sentiment</span><span class="p">(</span><span class="n">tweet_df</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate sentiment score for every tweet in DataFrame tweet_df</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sentiment_dict</span> <span class="o">=</span> <span class="n">get_sentiment_dict</span><span class="p">()</span>
+
+    <span class="n">apply_fun</span>  <span class="o">=</span>  <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">sentiment_count</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sentiment_dict</span><span class="p">)</span>
+    <span class="n">tweet_sents</span> <span class="o">=</span> <span class="n">tweet_df</span><span class="p">[</span><span class="s">&#39;tokens&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">apply_fun</span><span class="p">,</span> <span class="n">sentiment_dict</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">tweet_sents</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">sentiment_count</span><span class="p">(</span><span class="n">tokens</span><span class="p">,</span> <span class="n">sentiment_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate sentiment score for list of &quot;tokens&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Initialize</span>
+    <span class="n">sent_score</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="n">word_count</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="n">sent_buck</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">sent_buck</span><span class="p">[</span><span class="s">&#39;positive&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="n">sent_buck</span><span class="p">[</span><span class="s">&#39;negative&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sentiment_dict</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">sentiment_dict</span><span class="p">[</span><span class="n">word</span><span class="p">]</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">sent_buck</span><span class="p">[</span><span class="s">&#39;positive&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="n">sentiment_dict</span><span class="p">[</span><span class="n">word</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">sentiment_dict</span><span class="p">[</span><span class="n">word</span><span class="p">]</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">sent_buck</span><span class="p">[</span><span class="s">&#39;negative&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="n">sentiment_dict</span><span class="p">[</span><span class="n">word</span><span class="p">])</span>
+        <span class="n">word_count</span> <span class="o">+=</span> <span class="mf">1.</span>
+
+    <span class="k">if</span> <span class="n">word_count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">sent_score</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sent_score</span> <span class="o">=</span> <span class="p">(</span><span class="n">sent_buck</span><span class="p">[</span><span class="s">&#39;positive&#39;</span><span class="p">]</span><span class="o">+</span><span class="n">sent_buck</span><span class="p">[</span><span class="s">&#39;negative&#39;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">sent_score</span>
+</pre></div>
+
+
+<h2>"But how did it make you feel?"</h2>
+<p>With this machinery, we can now take a look at the Bonnaroo dataset.</p>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">calculate_sentiment</span>
+
+<span class="n">sents</span> <span class="o">=</span> <span class="n">calculate_sentiment</span><span class="o">.</span><span class="n">get_tweet_sentiment</span><span class="p">(</span><span class="n">bandPop</span><span class="p">)</span>
+
+<span class="k">print</span> <span class="s">&#39;------------------------&#39;</span>
+<span class="k">print</span> <span class="s">&#39;| Tweet sentiment head |&#39;</span>
+<span class="k">print</span> <span class="s">&#39;------------------------&#39;</span>
+<span class="k">print</span> <span class="n">sents</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+
+<div class="highlight"><pre><span class="o">------------------------</span>
+<span class="o">|</span> <span class="n">Tweet</span> <span class="n">sentiment</span> <span class="n">head</span> <span class="o">|</span>
+<span class="o">------------------------</span>
+<span class="n">created_at</span>
+<span class="mi">2014</span><span class="o">-</span><span class="mo">06</span><span class="o">-</span><span class="mi">11</span> <span class="mi">09</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mi">57</span><span class="o">-</span><span class="mo">05</span><span class="o">:</span><span class="mo">00</span>    <span class="mi">3</span>
+<span class="mi">2014</span><span class="o">-</span><span class="mo">06</span><span class="o">-</span><span class="mi">11</span> <span class="mi">09</span><span class="o">:</span><span class="mi">24</span><span class="o">:</span><span class="mi">57</span><span class="o">-</span><span class="mo">05</span><span class="o">:</span><span class="mo">00</span>    <span class="mi">2</span>
+<span class="mi">2014</span><span class="o">-</span><span class="mo">06</span><span class="o">-</span><span class="mi">11</span> <span class="mi">09</span><span class="o">:</span><span class="mi">25</span><span class="o">:</span><span class="mo">01</span><span class="o">-</span><span class="mo">05</span><span class="o">:</span><span class="mo">00</span>    <span class="mi">0</span>
+<span class="mi">2014</span><span class="o">-</span><span class="mo">06</span><span class="o">-</span><span class="mi">11</span> <span class="mi">09</span><span class="o">:</span><span class="mi">25</span><span class="o">:</span><span class="mo">05</span><span class="o">-</span><span class="mo">05</span><span class="o">:</span><span class="mo">00</span>    <span class="mi">0</span>
+<span class="mi">2014</span><span class="o">-</span><span class="mo">06</span><span class="o">-</span><span class="mi">11</span> <span class="mi">09</span><span class="o">:</span><span class="mi">25</span><span class="o">:</span><span class="mo">06</span><span class="o">-</span><span class="mo">05</span><span class="o">:</span><span class="mo">00</span>    <span class="mi">0</span>
+<span class="nl">Name:</span> <span class="n">text_sentiment</span><span class="p">,</span> <span class="n">dtype</span><span class="o">:</span> <span class="n">float64</span>
+</pre></div>
+
+
+<p>We now have a single <code>text_sentiment</code> number associated with each tweet.</p>
+<div class="highlight"><pre><span class="k">print</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">-------------------------------&#39;</span>
+<span class="k">print</span> <span class="s">&#39;| Tweet sentiment description |&#39;</span>
+<span class="k">print</span> <span class="s">&#39;-------------------------------&#39;</span>
+<span class="k">print</span> <span class="n">sents</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+</pre></div>
+
+
+<div class="highlight"><pre><span class="o">-------------------------------</span>
+<span class="o">|</span> <span class="n">Tweet</span> <span class="n">sentiment</span> <span class="n">description</span> <span class="o">|</span>
+<span class="o">-------------------------------</span>
+<span class="n">count</span>    <span class="mf">66424.000000</span>
+<span class="n">mean</span>         <span class="mf">0.422844</span>
+<span class="n">std</span>          <span class="mf">2.344547</span>
+<span class="n">min</span>        <span class="o">-</span><span class="mf">20.000000</span>
+<span class="mi">25</span><span class="o">%</span>          <span class="mf">0.000000</span>
+<span class="mi">50</span><span class="o">%</span>          <span class="mf">0.000000</span>
+<span class="mi">75</span><span class="o">%</span>          <span class="mf">1.000000</span>
+<span class="n">max</span>         <span class="mf">24.000000</span>
+<span class="nl">Name:</span> <span class="n">text_sentiment</span><span class="p">,</span> <span class="n">dtype</span><span class="o">:</span> <span class="n">float64</span>
+</pre></div>
+
+
+<p>We can see that there is a positive average sentiment, but the range is quite large (-20, +24). Let's take a look at those minimum and maximum tweets:</p>
+<div class="highlight"><pre><span class="n">bandPop_sents</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">bandPop</span><span class="p">,</span> <span class="n">sents</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">print</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">-----------------------&#39;</span>
+<span class="k">print</span> <span class="s">&#39;| Most negative tweet |&#39;</span>
+<span class="k">print</span> <span class="s">&#39;-----------------------&#39;</span>
+<span class="k">print</span> <span class="n">bandPop_sents</span><span class="p">[</span><span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">==</span><span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()][</span><span class="s">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">print</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">-----------------------&#39;</span>
+<span class="k">print</span> <span class="s">&#39;| Most positive tweet |&#39;</span>
+<span class="k">print</span> <span class="s">&#39;-----------------------&#39;</span>
+<span class="k">print</span> <span class="n">bandPop_sents</span><span class="p">[</span><span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">==</span><span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()][</span><span class="s">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+
+
+<div class="highlight"><pre><span class="o">-----------------------</span>
+<span class="o">|</span> <span class="n">Most</span> <span class="n">negative</span> <span class="n">tweet</span> <span class="o">|</span>
+<span class="o">-----------------------</span>
+<span class="n">Mother</span> <span class="n">fuckers</span> <span class="n">quit</span> <span class="n">sending</span> <span class="n">me</span> <span class="n">your</span> <span class="n">bonnaroo</span> <span class="n">shit</span><span class="p">.</span> <span class="n">I</span> <span class="n">couldn</span><span class="err">&#39;</span><span class="n">t</span> <span class="n">give</span> <span class="n">a</span> <span class="n">fuck</span> <span class="n">about</span> <span class="n">some</span> <span class="n">shit</span> <span class="n">ass</span> <span class="n">music</span> <span class="n">festival</span>
+
+<span class="o">-----------------------</span>
+<span class="o">|</span> <span class="n">Most</span> <span class="n">positive</span> <span class="n">tweet</span> <span class="o">|</span>
+<span class="o">-----------------------</span>
+<span class="n">I</span> <span class="n">love</span> <span class="n">strangers</span><span class="p">.</span> <span class="n">I</span> <span class="n">love</span> <span class="n">dance</span> <span class="n">parties</span><span class="p">.</span> <span class="n">I</span>  <span class="n">love</span> <span class="n">music</span><span class="p">.</span> <span class="n">I</span> <span class="n">love</span> <span class="n">my</span> <span class="n">friends</span><span class="p">.</span> <span class="n">I</span> <span class="n">love</span> <span class="n">pizza</span><span class="p">.</span> <span class="n">I</span> <span class="n">love</span> <span class="n">camping</span><span class="p">.</span> <span class="n">I</span> <span class="n">love</span> <span class="n">high</span> <span class="n">fives</span><span class="p">.</span> <span class="n">I</span> <span class="n">love</span> <span class="n">bonnaroo</span><span class="p">.</span>
+</pre></div>
+
+
+<p>As you can see, the most negative tweet is no surprise. Although our sentiment scoring algorithm captured this tweet's sentiment fairly well, you will see in a bit how the algorithm often fails because "inflamatory language" is <em>always</em> scored so negatively. Meanwhile, the frequent use of the word "love" in the positive tweet makes it clear why this tweet ranked so high on the sentiment score.</p>
+<h2>Temporal Vibes</h2>
+<p>Now that we have our sentiment score for each tweet, I thought it would be interesting to look at how average sentiment changed with time. For this, I employ a similar approach to the last post by resampling the data. I also resample at different rates which reveals the tradeoff between temporal resolution and noise. Lastly, I've switched from using prettyplotlib to <a href="http://stanford.edu/~mwaskom/software/seaborn/">seaborn</a>. Prettyplotlib was abandoned by the creator, and seaborn seems to be pretty popular and easy to use.</p>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
+
+<span class="c"># Time series tweet sentiment</span>
+
+<span class="n">pal</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">dark_palette</span><span class="p">(</span><span class="s">&quot;skyblue&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c"># Different resampling rates</span>
+<span class="n">x5</span> <span class="o">=</span> <span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s">&#39;5t&#39;</span><span class="p">,</span><span class="n">how</span><span class="o">=</span><span class="s">&#39;mean&#39;</span><span class="p">)</span>
+<span class="n">x20</span> <span class="o">=</span> <span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s">&#39;20t&#39;</span><span class="p">,</span><span class="n">how</span><span class="o">=</span><span class="s">&#39;mean&#39;</span><span class="p">)</span>
+<span class="n">x60</span> <span class="o">=</span> <span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s">&#39;60t&#39;</span><span class="p">,</span><span class="n">how</span><span class="o">=</span><span class="s">&#39;mean&#39;</span><span class="p">)</span>
+
+<span class="n">x5</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">pal</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">lw</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">alpha</span><span class="o">=.</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">x20</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">pal</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">lw</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">alpha</span><span class="o">=.</span><span class="mi">75</span><span class="p">)</span>
+<span class="n">x60</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">pal</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gcf</span><span class="p">()</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+
+<span class="c"># Labels</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Date&#39;</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Text Sentiment Score&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s">&#39;Average Tweet Sentiment&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="c"># Legend</span>
+<span class="n">leg</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="s">&#39;5 min&#39;</span><span class="p">,</span> <span class="s">&#39;20 min&#39;</span><span class="p">,</span> <span class="s">&#39;60 min&#39;</span><span class="p">],</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&#39;Resampling Rate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">leg</span><span class="o">.</span><span class="n">get_title</span><span class="p">(),</span><span class="n">fontsize</span><span class="o">=</span><span class="s">&#39;15&#39;</span><span class="p">)</span>
+<span class="c"># Axes</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_xticklabels</span><span class="p">(),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="s">&#39;sans-serif&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_yticklabels</span><span class="p">(),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="s">&#39;sans-serif&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+
+
+<p><img alt="Average Sentiment" src="{{" title="site.url }}/assets/img/avg_tweet_sent.png" /></p>
+<p>For the high frequency resampling rate (5 min), you can see that the signal gets quite noisey near the morning of June 13th. It turns out that there were very few tweets during this time, so any single tweet with a sizeable sentiment score would dominate the 5 minute bin over which I was averaging.</p>
+<p>By decreasing the sampling rate to 60 minute bins, you can see a clear upturn in the average sentiment starting around midnight on June 15th which was the last night of the festival. I decided to look at some of the very positive tweets during this time.</p>
+<div class="highlight"><pre><span class="n">festival_end</span> <span class="o">=</span> <span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;2014-6-16&#39;</span><span class="p">:]</span>
+<span class="k">for</span> <span class="n">tweet</span> <span class="ow">in</span> <span class="n">festival_end</span><span class="p">[</span><span class="n">festival_end</span><span class="p">[</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">&gt;</span><span class="mi">10</span><span class="p">][</span><span class="s">&#39;text&#39;</span><span class="p">][:</span><span class="mi">6</span><span class="p">]:</span>
+    <span class="k">print</span> <span class="n">tweet</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span>
+</pre></div>
+
+
+<div class="highlight"><pre><span class="n">If</span> <span class="n">you</span><span class="err">&#39;</span><span class="n">re</span> <span class="n">a</span> <span class="n">stoner</span> <span class="n">an</span> <span class="n">you</span> <span class="n">love</span> <span class="n">good</span> <span class="n">food</span> <span class="n">and</span> <span class="n">good</span> <span class="n">music</span> <span class="n">you</span> <span class="n">need</span> <span class="n">to</span> <span class="n">go</span> <span class="n">to</span> <span class="n">bonnaroo</span> <span class="n">period</span> <span class="n">lol</span>
+
+<span class="n">I</span> <span class="n">am</span> <span class="n">so</span> <span class="n">happy</span> <span class="n">I</span> <span class="n">came</span> <span class="n">to</span> <span class="n">Bonnaroo</span><span class="p">.</span>  <span class="n">Had</span> <span class="n">so</span> <span class="n">much</span> <span class="n">fun</span> <span class="n">and</span> <span class="n">saw</span> <span class="n">so</span> <span class="n">many</span> <span class="n">amazing</span> <span class="n">bands</span><span class="p">.</span>
+
+<span class="n">High</span> <span class="n">Fives</span> <span class="n">and</span> <span class="n">Free</span> <span class="n">Hugs</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span><span class="mo">000</span> <span class="n">awesome</span> <span class="n">people</span><span class="p">,</span> <span class="n">over</span> <span class="mi">125</span><span class="o">+</span> <span class="n">amazing</span> <span class="n">performances</span><span class="p">,</span> <span class="mi">5</span> <span class="n">stages</span><span class="o">/</span><span class="n">tents</span><span class="p">...</span> <span class="err">#</span><span class="n">Bonnaroo2014</span> <span class="err">#</span><span class="n">Bonnaroo</span>
+
+<span class="err">@</span><span class="n">KKvspr</span> <span class="err">@</span><span class="n">Bonnaroo</span> <span class="n">lol</span> <span class="n">it</span> <span class="n">was</span> <span class="n">awesome</span><span class="p">,</span> <span class="n">so</span> <span class="n">trippy</span><span class="o">!</span> <span class="n">Lol</span> <span class="n">xo</span> <span class="n">hope</span> <span class="n">ur</span> <span class="n">well</span><span class="o">!</span> <span class="p">;</span><span class="o">-</span><span class="p">)</span> <span class="n">n</span> <span class="n">that</span> <span class="n">band</span> <span class="n">awesome</span> <span class="n">as</span> <span class="n">well</span><span class="p">.</span>
+
+<span class="n">Soooooo</span> <span class="n">many</span> <span class="n">people</span><span class="p">.</span> <span class="n">Wow</span> <span class="n">I</span> <span class="n">love</span> <span class="n">my</span> <span class="n">job</span><span class="p">.</span> <span class="n">I</span> <span class="n">had</span> <span class="n">an</span> <span class="n">amazing</span> <span class="n">time</span> <span class="n">working</span> <span class="n">Bonnaroo</span><span class="p">.</span>  <span class="n">Music</span> <span class="n">is</span> <span class="n">so</span> <span class="n">powerful</span><span class="p">,</span><span class="err">…</span> <span class="n">http</span><span class="o">:</span><span class="c1">//t.co/QTxJinI8xs</span>
+
+<span class="n">made</span> <span class="n">it</span> <span class="n">home</span><span class="p">,</span> <span class="n">had</span> <span class="n">the</span> <span class="n">best</span> <span class="n">shower</span> <span class="n">ever</span><span class="p">.</span> <span class="n">what</span> <span class="n">amazing</span> <span class="n">bonnaroo</span> <span class="p">(</span><span class="n">as</span> <span class="n">usual</span><span class="p">)</span><span class="o">!</span> <span class="n">met</span> <span class="n">lovely</span> <span class="n">people</span><span class="p">,</span> <span class="n">got</span> <span class="n">lots</span> <span class="n">of</span> <span class="n">free</span> <span class="n">alcohol</span><span class="p">,</span> <span class="n">and</span> <span class="p">(</span><span class="n">duh</span><span class="p">)</span> <span class="n">the</span> <span class="n">music</span><span class="o">!</span>
+</pre></div>
+
+
+<p>This is pretty cool - it seems like many of these tweets are people looking fondly back on their time at Bonnaroo and talking about how much they enjoyed it. It would be interesting to look at how long this "after-glow" lasts.</p>
+<h2>Festival Chatter Scatter</h2>
+<p>Lastly, to get back to some insight into the artists, I decided to create a scatterplot of the average sentiment for each of the top 40 most popular artists on the x-axis, and the sentiment standard deviation on the y-axis. The idea was that maybe the standard deviation would indicate "controversial" artists.</p>
+<div class="highlight"><pre><span class="n">top_40</span> <span class="o">=</span> <span class="n">band_hist</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()[:</span><span class="mi">40</span><span class="p">]</span>
+<span class="n">sent_stats</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">top_40</span><span class="p">:</span>
+    <span class="n">mn</span> <span class="o">=</span>  <span class="n">bandPop_sents</span><span class="p">[</span><span class="n">bandPop_sents</span><span class="p">[</span><span class="n">band</span><span class="p">]</span><span class="o">==</span><span class="bp">True</span><span class="p">][</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">bandPop_sents</span><span class="p">[</span><span class="n">bandPop_sents</span><span class="p">[</span><span class="n">band</span><span class="p">]</span><span class="o">==</span><span class="bp">True</span><span class="p">][</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+    <span class="n">sent_stats</span><span class="p">[</span><span class="n">band</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">mn</span><span class="p">,</span> <span class="n">sd</span><span class="p">]</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sent_stats</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">s</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">k</span><span class="p">,(</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span><span class="n">textcoords</span><span class="o">=</span><span class="s">&#39;offset points&#39;</span><span class="p">)</span>
+
+<span class="c"># Axes</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="o">-</span><span class="mf">1.2</span><span class="p">,</span> <span class="mf">1.7</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">3.5</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_xticklabels</span><span class="p">(),</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span><span class="n">family</span><span class="o">=</span><span class="s">&#39;sans-serif&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_yticklabels</span><span class="p">(),</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span><span class="n">family</span><span class="o">=</span><span class="s">&#39;sans-serif&#39;</span><span class="p">)</span>
+<span class="c"># Labels</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Sentiment Standard Deviation&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Sentiment Mean&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="sb">````</span>
+<span class="err">!</span><span class="p">[</span><span class="n">Scatter</span> <span class="n">Sentiment</span><span class="p">]({{</span> <span class="n">site</span><span class="o">.</span><span class="n">url</span> <span class="p">}}</span><span class="o">/</span><span class="n">assets</span><span class="o">/</span><span class="n">img</span><span class="o">/</span><span class="n">sent_scatter</span><span class="o">.</span><span class="n">png</span><span class="p">)</span>
+
+<span class="n">I</span> <span class="n">wasn</span><span class="s">&#39;t quite sure what to make of this chart. You can see that Broken Bells is far positive in terms of mean sentiment and low on the controversy axis, which is probably not surprising. I was interested in the far negative outlier, A$AP Ferg. I&#39;</span><span class="n">ve</span> <span class="n">never</span> <span class="n">listened</span> <span class="n">to</span> <span class="n">him</span><span class="p">,</span> <span class="n">so</span> <span class="n">I</span> <span class="n">had</span> <span class="n">no</span> <span class="n">intuition</span><span class="o">.</span> <span class="n">Looking</span> <span class="n">at</span> <span class="n">some</span> <span class="n">of</span> <span class="n">the</span> <span class="n">more</span> <span class="n">negative</span> <span class="n">A</span><span class="err">$</span><span class="n">AP</span> <span class="n">Ferg</span> <span class="n">tweets</span><span class="p">,</span> <span class="n">we</span> <span class="n">again</span> <span class="n">run</span> <span class="n">into</span> <span class="n">the</span> <span class="n">limitations</span> <span class="n">of</span> <span class="n">sentiment</span> <span class="n">analysis</span><span class="p">:</span>
+
+<span class="sb">``</span><span class="err">`</span><span class="n">python</span>
+<span class="k">for</span> <span class="n">tweet</span> <span class="ow">in</span> <span class="n">bandPop_sents</span><span class="p">[(</span><span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;A$AP Ferg&#39;</span><span class="p">]</span><span class="o">==</span><span class="bp">True</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">bandPop_sents</span><span class="p">[</span><span class="s">&#39;text_sentiment&#39;</span><span class="p">]</span><span class="o">&lt;-</span><span class="mi">5</span><span class="p">)][</span><span class="s">&#39;text&#39;</span><span class="p">]:</span>
+    <span class="k">print</span> <span class="n">tweet</span>
+</pre></div>
+
+
+<div class="highlight"><pre><span class="n">Holy</span> <span class="n">shit</span> <span class="n">the</span> <span class="n">surprise</span> <span class="n">guests</span> <span class="n">dont</span> <span class="n">stop</span><span class="p">.</span>  <span class="n">A</span><span class="err">$</span><span class="n">AP</span> <span class="n">Ferg</span> <span class="n">just</span> <span class="n">hit</span> <span class="n">the</span> <span class="n">stage</span> <span class="n">with</span> <span class="n">a</span> <span class="n">cover</span> <span class="n">of</span> <span class="n">The</span> <span class="n">Notorious</span> <span class="n">B</span><span class="p">.</span><span class="n">I</span><span class="p">.</span><span class="n">G</span><span class="p">.</span><span class="err">&#39;</span><span class="n">s</span> <span class="s">&quot;Juicy&quot;</span><span class="p">.</span> <span class="err">@</span><span class="n">Bonnaroo</span>
+
+<span class="n">Zedd</span><span class="err">&#39;</span><span class="n">s</span> <span class="n">on</span> <span class="n">drums</span> <span class="n">and</span> <span class="n">A</span><span class="err">$</span><span class="n">AP</span> <span class="n">Ferg</span> <span class="n">is</span> <span class="n">climbing</span> <span class="n">shit</span> <span class="n">and</span> <span class="n">the</span> <span class="err">@</span><span class="n">Skrillex</span> <span class="err">#</span><span class="n">superjam</span> <span class="n">is</span> <span class="n">officially</span> <span class="n">the</span> <span class="n">craziest</span> <span class="n">thing</span> <span class="n">I</span><span class="err">&#39;</span><span class="n">ve</span> <span class="n">seen</span> <span class="n">in</span> <span class="n">awhile</span> <span class="err">#</span><span class="n">bonnaroo</span>
+
+<span class="n">A</span><span class="err">$</span><span class="n">AP</span> <span class="n">FERG</span> <span class="n">KILLED</span> <span class="n">IT</span><span class="o">!</span> <span class="n">Shit</span> <span class="n">was</span> <span class="n">crazy</span><span class="o">!</span> <span class="err">#</span><span class="n">bonnaroo</span>
+
+<span class="n">A</span><span class="err">$</span><span class="n">AP</span> <span class="n">Ferg</span> <span class="n">just</span> <span class="n">pulled</span> <span class="n">the</span> <span class="n">most</span> <span class="n">ridiculous</span> <span class="n">shit</span> <span class="n">of</span> <span class="n">all</span> <span class="n">time</span> <span class="n">at</span> <span class="n">Bonnaroo</span> <span class="n">right</span> <span class="n">now</span><span class="p">.</span>
+
+<span class="n">I</span> <span class="n">think</span> <span class="n">I</span> <span class="n">might</span> <span class="n">have</span> <span class="n">lost</span> <span class="mi">5l</span><span class="n">bs</span> <span class="n">during</span> <span class="n">the</span> <span class="n">A</span><span class="err">$</span><span class="n">AP</span> <span class="n">Ferg</span> <span class="n">show</span> <span class="n">today</span> <span class="n">at</span> <span class="n">Bonnaroo</span><span class="p">.</span> <span class="n">Just</span> <span class="n">constantly</span> <span class="n">moshing</span> <span class="n">around</span><span class="p">.</span> <span class="n">Fucking</span> <span class="n">crazy</span><span class="p">.</span>
+</pre></div>
+
+
+<p>People clearly loved this show, but their language is not well suited to be captured by <code>AFINN-111</code>. And while I'm sure that there are many ways to attempt to alleviate this issue, I'll worry abou that another day. For now, all the scripts used in this series are on my <a href="https://github.com/EthanRosenthal/festival-chatter">GitHub</a>.</p>
+                <div class="clear"></div>
+
+                <div class="info">
+                    <a href="/festival-chatter-part-4-some-simple-sentiment-analysis.html">posted at 00:00</a>
+                </div>
+            </article>
+            <div class="clear"></div>
+            <footer>
+                <p>
+                <a href="https://github.com/jody-frankowski/blue-penguin">Blue Penguin</a> Theme
+                &middot;
+                Powered by <a href="http://getpelican.com">Pelican</a>
+            </footer>
+        </div>
+        <div class="clear"></div>
+    </div>
+</body>
+</html>
