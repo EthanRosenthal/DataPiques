@@ -3447,7 +3447,7 @@ Best iterations: 200
 <div class="prompt input_prompt">In&nbsp;[34]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython2"><pre><span class="n">idx</span> <span class="o">=</span> <span class="mi">1</span> <span class="c"># Golden Eye</span>
+<div class=" highlight hl-ipython2"><pre><span class="n">idx</span> <span class="o">=</span> <span class="mi">1</span> <span class="c"># GoldenEye</span>
 <span class="n">compare_recs</span><span class="p">(</span><span class="n">als_sim</span><span class="p">,</span> <span class="n">sgd_sim</span><span class="p">,</span> <span class="n">idx_to_movie</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">base_url</span><span class="p">,</span> <span class="n">api_key</span><span class="p">)</span>
 </pre></div>
 
@@ -3723,7 +3723,7 @@ Best iterations: 200
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>So how do we think we did? I find it very interesting that the best test MSE for our ALS model was 5.04 compared to 0.76 for SGD. That's a giant difference, and yet I thought the ALS recommendations might actually nudge out SGD; particularly, Golden Eye and Dumbo recommendations.</p>
+<p>So how do we think we did? I find it very interesting that the best test MSE for our ALS model was 5.04 compared to 0.76 for SGD. That's a giant difference, and yet I think the ALS recommendations might actually beat out the SGD ones; particularly, the GoldenEye and Dumbo recommendations.</p>
 <p>I have found similar behavior in some of my own work, as well. I have a vague hunch that SGD tends to overfit more than ALS and is more susceptible to popularity bias. Unfortunately, I have zero math to back this up, so it'll remain purely anecdotal for now. An alternative explanation could be that the SGD movie-to-movie recommendations are actually better than the ALS ones even if they seem like less similar movies. In a recent Netflix <a href="http://dl.acm.org/citation.cfm?id=2843948">paper</a>, they show a similar comparison of two different models' movie-to-movie recommendations. It turns out that the model with movies that look less similar by eye (but are generally more popular movies) performs better on A/B tests. And really, A/B tests are a much better way of truly benchmarking recommendation systems compared to this offline data modeling.</p>
 <p>And on a final note, maybe we would want to just combine both models into an ensemble which seems to be what <a href="https://medium.com/@xamat/10-more-lessons-learned-from-building-real-life-ml-systems-part-i-b309cafc7b5e">everbody does</a> nowadays.</p>
 <p><em><a href="https://github.com/EthanRosenthal/DataPiques_source/blob/master/content/notebooks/2016-01-09-explicit-matrix-factorization-als-sgd.ipynb">Link</a> to Jupyter notebook of this post.</em></p>
