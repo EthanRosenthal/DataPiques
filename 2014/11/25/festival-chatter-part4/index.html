@@ -3,8 +3,10 @@
 <head>
         <meta charset="utf-8" />
     <title>Data Piques | Festival Chatter (Part 4) - Some Simple Sentiment Analysis</title>
-    <link rel="shortcut icon" type="image/png" href="../../../../favicon.png">
-    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.ico">
+    <link rel="shortcut icon" type="image/png" href="http://blog.ethanrosenthal.com/favicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="http://blog.ethanrosenthal.com/favicon.ico">
+    <link href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Full Atom Feed" />
+    <link href="http://blog.ethanrosenthal.com/feeds/misc.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Categories Atom Feed" />
      
 <style type="text/css">
 /*!
@@ -11782,9 +11784,9 @@ jQuery(document).ready(function($) {
 </script>
 
 
-    <link rel="stylesheet" href="../../../../theme/css/screen.css" type="text/css" />
-    <link rel="stylesheet" href="../../../../theme/css/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../../../../theme/css/print.css" type="text/css" media="print" />
+    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/screen.css" type="text/css" />
+    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/print.css" type="text/css" media="print" />
     <meta name="generator" content="Pelican" />
 
 </head>
@@ -11792,14 +11794,14 @@ jQuery(document).ready(function($) {
     <header>
         <nav>
             <ul>
-                <li><a href="../../../..">Home</a></li>
+                <li><a href="http://blog.ethanrosenthal.com">Home</a></li>
                 <li><a href="/archives.html">Archives</a></li>
                 <li><a href="/pages/about.html">About</a></li>
                 <li><a href="http://www.ethanrosenthal.com">Website</a></li>
             </ul>
         </nav>
         <div class="header_box">
-            <h1><a href="../../../..">Data Piques</a></h1>
+            <h1><a href="http://blog.ethanrosenthal.com">Data Piques</a></h1>
         </div>
     </header>
     <div id="wrapper">
@@ -11807,10 +11809,10 @@ jQuery(document).ready(function($) {
 
             <article class="post">
                 <h2 class="title">
-                    <a href="../../../../2014/11/25/festival-chatter-part4/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 4) - Some Simple Sentiment Analysis&quot;">Festival Chatter (Part 4) - Some Simple Sentiment Analysis</a>
+                    <a href="http://blog.ethanrosenthal.com/2014/11/25/festival-chatter-part4/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 4) - Some Simple Sentiment Analysis&quot;">Festival Chatter (Part 4) - Some Simple Sentiment Analysis</a>
                 </h2>
 
-                <p>I think this post will probably conclude my Festival Chatter series on analyzing Bonnaroo tweets in Python (<a href="../../../../2014/08/31/festival-chatter-part1/">part 1</a>, <a href="../../../../2014/09/09/festival-chatter-part2/">part 2</a>, <a href="../../../../2014/10/06/festival-chatter-part3/">part 3</a>). I've had a lot of fun messing around with this dataset, but I think it's time to move on to playing with something else. For this last post, though, I will show some simple <a href="http://en.wikipedia.org/wiki/Sentiment_analysis">sentiment analysis</a> of the collected tweets. There are a whole bunch of issues with this method of sentiment analysis. I'll mention some of these after presenting the findings.</p>
+                <p>I think this post will probably conclude my Festival Chatter series on analyzing Bonnaroo tweets in Python (<a href="http://blog.ethanrosenthal.com/2014/08/31/festival-chatter-part1/">part 1</a>, <a href="http://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/">part 2</a>, <a href="http://blog.ethanrosenthal.com/2014/10/06/festival-chatter-part3/">part 3</a>). I've had a lot of fun messing around with this dataset, but I think it's time to move on to playing with something else. For this last post, though, I will show some simple <a href="http://en.wikipedia.org/wiki/Sentiment_analysis">sentiment analysis</a> of the collected tweets. There are a whole bunch of issues with this method of sentiment analysis. I'll mention some of these after presenting the findings.</p>
 <h2>Words to Numbers</h2>
 <p>The sentiment analysis used here consists of associating a number with an English word where the value of the number corresponds to how "positive" or "negative" the word seems. Presumably, I could go through the dictionary and subjectively assign numbers to words, but thankfully somebody else has less of a life than me (maybe). So, if you click <a href="http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=6010">here</a>, you can download a tab-separated text file called <code>AFINN-111.txt</code> that contains a dictionary of 2477 words and associated integer sentiment score. Larger positive (negative) values correspond to more positive (negative) sentiment. On a total side note, I often see versions of my previous sentence in scientific papers where one attempts to describe two often opposing concepts and puts the antonyms in parentheses in order to save space. I wonder if there is a name for this "literary device"? Anyway, good words like "love" get a value of +3 on the sentiment score, while hate is worth -3.</p>
 <p>I wrote a small script <code>calculate_sentiment.py</code> that reads in <code>AFINN-111.txt</code> and calculates the sentiment score of every tweet. This score is just the sum of the sentiment scores for all words in the tweet that are also in the dictionary. I originally wrote this script for a homework assignment from the Coursera <a href="https://www.coursera.org/course/datasci">Introduction to Data Science</a> course. Things like separating the scores into "positive" and "negative" buckets are unnecessary now and just left over from the assignment.</p>
@@ -11983,7 +11985,7 @@ I love strangers. I love dance parties. I  love music. I love my friends. I love
 </pre></div>
 
 
-<p><img alt="Average Sentiment" src="../../../../assets/img/avg_tweet_sent.png" /></p>
+<p><img alt="Average Sentiment" src="http://blog.ethanrosenthal.com/assets/img/avg_tweet_sent.png" /></p>
 <p>For the high frequency resampling rate (5 min), you can see that the signal gets quite noisey near the morning of June 13th. It turns out that there were very few tweets during this time, so any single tweet with a sizeable sentiment score would dominate the 5 minute bin over which I was averaging.</p>
 <p>By decreasing the sampling rate to 60 minute bins, you can see a clear upturn in the average sentiment starting around midnight on June 15th which was the last night of the festival. I decided to look at some of the very positive tweets during this time.</p>
 <div class="highlight"><pre><span></span><span class="n">festival_end</span> <span class="o">=</span> <span class="n">bandPop_sents</span><span class="p">[</span><span class="s1">&#39;2014-6-16&#39;</span><span class="p">:]</span>
@@ -12057,7 +12059,7 @@ made it home, had the best shower ever. what amazing bonnaroo (as usual)! met lo
                 <div class="clear"></div>
 
                 <div class="info">
-                    <a href="../../../../2014/11/25/festival-chatter-part4/">posted on Nov 25, 2014</a>
+                    <a href="http://blog.ethanrosenthal.com/2014/11/25/festival-chatter-part4/">posted on Nov 25, 2014</a>
                 </div>
             </article>
             <div class="clear"></div>
@@ -12066,9 +12068,20 @@ made it home, had the best shower ever. what amazing bonnaroo (as usual)! met lo
                 <a href="https://github.com/jody-frankowski/blue-penguin">Blue Penguin</a> Theme
                 &middot;
                 Powered by <a href="http://getpelican.com">Pelican</a>
+                &middot;
+                <a href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" rel="alternate">Atom Feed</a>
             </footer>
         </div>
         <div class="clear"></div>
     </div>
+    <script type="text/javascript">
+    var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+    document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+    try {
+        var pageTracker = _gat._getTracker("UA-54232305-1");
+    pageTracker._trackPageview();
+    } catch(err) {}</script>
 </body>
 </html>

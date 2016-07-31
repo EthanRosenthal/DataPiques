@@ -3,8 +3,10 @@
 <head>
         <meta charset="utf-8" />
     <title>Data Piques | Festival Chatter (Part 2) - Evaluating Band Popularity from Bonnaroo Tweets</title>
-    <link rel="shortcut icon" type="image/png" href="../../../../favicon.png">
-    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.ico">
+    <link rel="shortcut icon" type="image/png" href="http://blog.ethanrosenthal.com/favicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="http://blog.ethanrosenthal.com/favicon.ico">
+    <link href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Full Atom Feed" />
+    <link href="http://blog.ethanrosenthal.com/feeds/misc.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Categories Atom Feed" />
      
 <style type="text/css">
 /*!
@@ -11782,9 +11784,9 @@ jQuery(document).ready(function($) {
 </script>
 
 
-    <link rel="stylesheet" href="../../../../theme/css/screen.css" type="text/css" />
-    <link rel="stylesheet" href="../../../../theme/css/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../../../../theme/css/print.css" type="text/css" media="print" />
+    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/screen.css" type="text/css" />
+    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/print.css" type="text/css" media="print" />
     <meta name="generator" content="Pelican" />
 
 </head>
@@ -11792,14 +11794,14 @@ jQuery(document).ready(function($) {
     <header>
         <nav>
             <ul>
-                <li><a href="../../../..">Home</a></li>
+                <li><a href="http://blog.ethanrosenthal.com">Home</a></li>
                 <li><a href="/archives.html">Archives</a></li>
                 <li><a href="/pages/about.html">About</a></li>
                 <li><a href="http://www.ethanrosenthal.com">Website</a></li>
             </ul>
         </nav>
         <div class="header_box">
-            <h1><a href="../../../..">Data Piques</a></h1>
+            <h1><a href="http://blog.ethanrosenthal.com">Data Piques</a></h1>
         </div>
     </header>
     <div id="wrapper">
@@ -11807,10 +11809,10 @@ jQuery(document).ready(function($) {
 
             <article class="post">
                 <h2 class="title">
-                    <a href="../../../../2014/09/09/festival-chatter-part2/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 2) - Evaluating Band Popularity from Bonnaroo Tweets&quot;">Festival Chatter (Part 2) - Evaluating Band Popularity from Bonnaroo Tweets</a>
+                    <a href="http://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 2) - Evaluating Band Popularity from Bonnaroo Tweets&quot;">Festival Chatter (Part 2) - Evaluating Band Popularity from Bonnaroo Tweets</a>
                 </h2>
 
-                <p>In my previous <a href="../../../../2014/08/31/festival-chatter-part1/">post</a>, I wrote about how I collected tweets about the Bonnaroo Music and Arts Festival during the entirety of the festival. There are a wide range of questions that could be answered by this dataset, like</p>
+                <p>In my previous <a href="http://blog.ethanrosenthal.com/2014/08/31/festival-chatter-part1/">post</a>, I wrote about how I collected tweets about the Bonnaroo Music and Arts Festival during the entirety of the festival. There are a wide range of questions that could be answered by this dataset, like</p>
 <ul>
 <li>Do people spell worse as they become more intoxicated throughout the night?</li>
 <li>Does text <a href="http://en.wikipedia.org/wiki/Sentiment_analysis">sentiment</a> decline as people go more days without bathing?</li>
@@ -12045,13 +12047,13 @@ dtype: int64
 
 
 <p>And now, finally, all we have to do is type <code>bandPop[:10].plot(kind='bar')</code> (and maybe fiddle around in <em>matplotlib</em> for an hour adjusting properties of the figure) and we get a histogram of mentions for the top ten most popular bands at Bonnaroo:</p>
-<p><img alt="Top Ten Bands" src="../../../../assets/img/bandPop_top10.png" /></p>
+<p><img alt="Top Ten Bands" src="http://blog.ethanrosenthal.com/assets/img/bandPop_top10.png" /></p>
 <p>And of course it's Kanye! Is anybody surprised?</p>
-<p>Wow, that was a lot of work for one, measly histogram! However, we now have a bunch of data analytical machinery that we can use to delve deeper into this dataset. In my <a href="../../../../2014/10/06/festival-chatter-part3/">next post</a>, I'll do just that!</p>
+<p>Wow, that was a lot of work for one, measly histogram! However, we now have a bunch of data analytical machinery that we can use to delve deeper into this dataset. In my <a href="http://blog.ethanrosenthal.com/2014/10/06/festival-chatter-part3/">next post</a>, I'll do just that!</p>
                 <div class="clear"></div>
 
                 <div class="info">
-                    <a href="../../../../2014/09/09/festival-chatter-part2/">posted on Sep 09, 2014</a>
+                    <a href="http://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/">posted on Sep 09, 2014</a>
                 </div>
             </article>
             <div class="clear"></div>
@@ -12060,9 +12062,20 @@ dtype: int64
                 <a href="https://github.com/jody-frankowski/blue-penguin">Blue Penguin</a> Theme
                 &middot;
                 Powered by <a href="http://getpelican.com">Pelican</a>
+                &middot;
+                <a href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" rel="alternate">Atom Feed</a>
             </footer>
         </div>
         <div class="clear"></div>
     </div>
+    <script type="text/javascript">
+    var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+    document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+    try {
+        var pageTracker = _gat._getTracker("UA-54232305-1");
+    pageTracker._trackPageview();
+    } catch(err) {}</script>
 </body>
 </html>

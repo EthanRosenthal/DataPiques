@@ -3,8 +3,10 @@
 <head>
         <meta charset="utf-8" />
     <title>Data Piques | Explicit Matrix Factorization: ALS, SGD, and All That Jazz</title>
-    <link rel="shortcut icon" type="image/png" href="../../../../favicon.png">
-    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.ico">
+    <link rel="shortcut icon" type="image/png" href="http://blog.ethanrosenthal.com/favicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="http://blog.ethanrosenthal.com/favicon.ico">
+    <link href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Full Atom Feed" />
+    <link href="http://blog.ethanrosenthal.com/feeds/misc.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Categories Atom Feed" />
      
 <style type="text/css">
 /*!
@@ -11782,9 +11784,9 @@ jQuery(document).ready(function($) {
 </script>
 
 
-    <link rel="stylesheet" href="../../../../theme/css/screen.css" type="text/css" />
-    <link rel="stylesheet" href="../../../../theme/css/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../../../../theme/css/print.css" type="text/css" media="print" />
+    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/screen.css" type="text/css" />
+    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/print.css" type="text/css" media="print" />
     <meta name="generator" content="Pelican" />
 
 </head>
@@ -11792,14 +11794,14 @@ jQuery(document).ready(function($) {
     <header>
         <nav>
             <ul>
-                <li><a href="../../../..">Home</a></li>
+                <li><a href="http://blog.ethanrosenthal.com">Home</a></li>
                 <li><a href="/archives.html">Archives</a></li>
                 <li><a href="/pages/about.html">About</a></li>
                 <li><a href="http://www.ethanrosenthal.com">Website</a></li>
             </ul>
         </nav>
         <div class="header_box">
-            <h1><a href="../../../..">Data Piques</a></h1>
+            <h1><a href="http://blog.ethanrosenthal.com">Data Piques</a></h1>
         </div>
     </header>
     <div id="wrapper">
@@ -11807,7 +11809,7 @@ jQuery(document).ready(function($) {
 
             <article class="post">
                 <h2 class="title">
-                    <a href="../../../../2016/01/09/explicit-matrix-factorization-sgd-als/" rel="bookmark" title="Permanent Link to &quot;Explicit Matrix Factorization: ALS, SGD, and All That Jazz&quot;">Explicit Matrix Factorization: ALS, SGD, and All That Jazz</a>
+                    <a href="http://blog.ethanrosenthal.com/2016/01/09/explicit-matrix-factorization-sgd-als/" rel="bookmark" title="Permanent Link to &quot;Explicit Matrix Factorization: ALS, SGD, and All That Jazz&quot;">Explicit Matrix Factorization: ALS, SGD, and All That Jazz</a>
                 </h2>
 
                 <p>
@@ -11816,7 +11818,7 @@ jQuery(document).ready(function($) {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>In my last <a href="../../../../2015/11/02/intro-to-collaborative-filtering/">post</a>, I described user- and item-based collaborative filtering which are some of the simplest recommendation algorithms. For someone who is used to conventional machine learning classification and regression algorithms, collaborative filtering may have felt a bit <em>off</em>. To me, machine learning almost always deals with some function which we are trying to maximize or minimize. In simple linear regression, we minimize the mean squared distance between our predictions and the true values. Logistic regression involves maximizing a likelihood function. However, in my post on collaborative filtering, we randomly tried a bunch of different parameters (distance function, top-k cutoff) and watched what happened to the mean squared error. This sure doesn't feel like machine <em>learning</em>.</p>
+<p>In my last <a href="http://blog.ethanrosenthal.com/2015/11/02/intro-to-collaborative-filtering/">post</a>, I described user- and item-based collaborative filtering which are some of the simplest recommendation algorithms. For someone who is used to conventional machine learning classification and regression algorithms, collaborative filtering may have felt a bit <em>off</em>. To me, machine learning almost always deals with some function which we are trying to maximize or minimize. In simple linear regression, we minimize the mean squared distance between our predictions and the true values. Logistic regression involves maximizing a likelihood function. However, in my post on collaborative filtering, we randomly tried a bunch of different parameters (distance function, top-k cutoff) and watched what happened to the mean squared error. This sure doesn't feel like machine <em>learning</em>.</p>
 <p>To bring some technical rigor to recommender systems, I would like to talk about matrix factorization where we do, in fact, <em>learn</em> parameters to a model in order to directly minimize a function. Explanations of matrix factorization often start with talks of "low-rank matrices" and "singular value decomposition". While these are important for a fundamental understanding of this topic, I don't find math-speak to be too helpful in understanding the basic concepts of various algorithms. Let me simply state the assumptions that basic matrix factorization makes.</p>
 <h2 id="Initial-assumptions">Initial assumptions<a class="anchor-link" href="#Initial-assumptions">&#182;</a></h2><p>We will use the same example data from the previous post, so recall that we had a user-by-item matrix where nonzero elements of the matrix are ratings that a user has given an item. Matrix factorization <em>assumes</em> that:</p>
 <ul>
@@ -13337,7 +13339,7 @@ iMgs/w96JuA8txMLAwAAAABJRU5ErkJggg==
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>So it looks like the best performing parameters were 20 factors and a regularization value of 0.01. I would like to again look at the movie-to-movie similarity like my previous <a href="../../../../2015/11/02/intro-to-collaborative-filtering/">post</a>, but let's first explore the other minimization algorithm: stochastic gradient descent (SGD).</p>
+<p>So it looks like the best performing parameters were 20 factors and a regularization value of 0.01. I would like to again look at the movie-to-movie similarity like my previous <a href="http://blog.ethanrosenthal.com/2015/11/02/intro-to-collaborative-filtering/">post</a>, but let's first explore the other minimization algorithm: stochastic gradient descent (SGD).</p>
 <h2 id="Stochastic-Gradient-Descent">Stochastic Gradient Descent<a class="anchor-link" href="#Stochastic-Gradient-Descent">&#182;</a></h2><p>With SGD, we again take derivatives of the loss function, but we take the derivative with respect to each variable in the model. The "stochastic" aspect of the algorithm involves taking the derivative and updating feature weights one individual sample at a time. So, for each sample, we take the derivative of each variable, set them all equal to zero, solve for the feature weights, and update each feature. Somehow this method actually converges.</p>
 <p>We will use a similar loss function to before, but I am going to add some more details to the model. Instead of assuming that a user <em>u</em>'s rating for item <em>i</em> can be described simply by the dot product of the user and item latent vectors, we will consider that each user and item can have a bias term associated with them. The rational is that certan users might tend to rate all movies highly, or certain movies may tend to always have low ratings. The way that I think about it is that the bias term takes care of the "DC" part of the signal which allows the latent factors to account for the more detailed variance in signal (kind of like the AC part). We will also include a global bias term as well. With all things combined, our predicted rating becomes</p>
 $$ \hat r_{ui} = \mu + b_{u} + b_{i} + \textbf{x}_{u}^{\intercal} \cdot{} \textbf{y}_{i} $$<p>where $\mu$ is the global bias, and $b_{u}$ ($b_{i}$) is the user (item) bias. Our loss function now becomes</p>
@@ -15555,7 +15557,7 @@ Best iterations: 200
                 <div class="clear"></div>
 
                 <div class="info">
-                    <a href="../../../../2016/01/09/explicit-matrix-factorization-sgd-als/">posted on Jan 09, 2016</a>
+                    <a href="http://blog.ethanrosenthal.com/2016/01/09/explicit-matrix-factorization-sgd-als/">posted on Jan 09, 2016</a>
                 </div>
             </article>
             <div class="clear"></div>
@@ -15564,9 +15566,20 @@ Best iterations: 200
                 <a href="https://github.com/jody-frankowski/blue-penguin">Blue Penguin</a> Theme
                 &middot;
                 Powered by <a href="http://getpelican.com">Pelican</a>
+                &middot;
+                <a href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" rel="alternate">Atom Feed</a>
             </footer>
         </div>
         <div class="clear"></div>
     </div>
+    <script type="text/javascript">
+    var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+    document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+    try {
+        var pageTracker = _gat._getTracker("UA-54232305-1");
+    pageTracker._trackPageview();
+    } catch(err) {}</script>
 </body>
 </html>
