@@ -557,8 +557,8 @@ Total phone messages: 216
 &lt;table&gt;
 &lt;thead&gt;&lt;tr&gt;
 &lt;th&gt;Media&lt;/th&gt;
-&lt;th&gt;&amp;lt;5,00&lt;/th&gt;
-&lt;th&gt;5,00-999&lt;/th&gt;
+&lt;th&gt;&amp;lt;500&lt;/th&gt;
+&lt;th&gt;500-999&lt;/th&gt;
 &lt;th&gt;1,000-1,499&lt;/th&gt;
 &lt;th&gt;&amp;gt;1,500&lt;/th&gt;
 &lt;/tr&gt;
