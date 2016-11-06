@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title>Data Piques</title>
+        <meta charset="utf-8" />
+    <title>Data Piques | Learning to Rank Sketchfab Models with LightFM</title>
     <link rel="shortcut icon" type="image/png" href="http://blog.ethanrosenthal.com/favicon.png">
     <link rel="shortcut icon" type="image/x-icon" href="http://blog.ethanrosenthal.com/favicon.ico">
     <link href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Full Atom Feed" />
+    <link href="http://blog.ethanrosenthal.com/feeds/misc.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Categories Atom Feed" />
      
 <style type="text/css">
 /*!
@@ -11787,6 +11788,7 @@ jQuery(document).ready(function($) {
     <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/pygments.css" type="text/css" />
     <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/print.css" type="text/css" media="print" />
     <meta name="generator" content="Pelican" />
+
 </head>
 <body>
     <header>
@@ -11803,78 +11805,1890 @@ jQuery(document).ready(function($) {
         </div>
     </header>
     <div id="wrapper">
-        <div id="content">            <h4 class="date">Nov 25, 2014</h4>
+        <div id="content">            <h4 class="date">Nov 07, 2016</h4>
 
             <article class="post">
                 <h2 class="title">
-                    <a href="http://blog.ethanrosenthal.com/2014/11/25/festival-chatter-part4/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 4) - Some Simple Sentiment Analysis&quot;">Festival Chatter (Part 4) - Some Simple Sentiment Analysis</a>
+                    <a href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/" rel="bookmark" title="Permanent Link to &quot;Learning to Rank Sketchfab Models with LightFM&quot;">Learning to Rank Sketchfab Models with LightFM</a>
                 </h2>
 
-                <p>I think this post will probably conclude my Festival Chatter series on analyzing Bonnaroo tweets in Python (<a href="http://blog.ethanrosenthal.com/2014/08/31/festival-chatter-part1/">part 1</a>, <a href="http://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/">part 2</a>, <a href="http://blog.ethanrosenthal.com/2014/10/06/festival-chatter-part3/">part 3</a>). I've had a lot of fun messing around with this dataset, but I think it's time to move on to playing with something else. For ...</p>
+                <p>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>In this post we're going to do a bunch of cool things following up on the last <a href="http://blog.ethanrosenthal.com/2016/10/19/implicit-mf-part-1/">post</a> introducing implicit matrix factorization. We're going to explore Learning to Rank, a different method for implicit matrix factorization, and then use the library <a href="http://lyst.github.io/lightfm/docs/home.html">LightFM</a> to incorporate side information into our recommender. Next, we'll use <a href="https://scikit-optimize.github.io/">scikit-optimize</a> to be smarter than grid search for cross validating hyperparameters. Lastly, we'll see that we can move beyond simple user-to-item and item-to-item recommendations now that we have side information embedded in the same space as our users and items. Let's go!</p>
+<h2 id="History-lesson">History lesson<a class="anchor-link" href="#History-lesson">&#182;</a></h2><p>When I started working at Birchbox, I was tasked with finding a way to incorporate our rich customer information into the implicit feedback matrix factorization recommendation system. I had no idea what I was doing, so I did a lot of google searching. This proved a difficult problem because there are commonly two paradigms of recommender systems - content-based approaches, like when one has demographic customer data and uses this data to find other similar customers, and "ratings-based" approaches, like when one has data on what each user rated each item they interacted with. The desire was for me to marry these two approaches.</p>
+<p>Reading through the classic survey article, <a href="http://www.columbia.edu/~jwp2128/Teaching/W4721/papers/ieeecomputer.pdf">Matrix Factorization Techniques for Recommender Systems</a> (pdf link), revealed a section titled "Additional Input Sources". This contains one such approach to incorporating so-called "side information" into a recommender system. The idea was relatively simple (well, simple relative to the initial hurdle of wrapping one's head around matrix factorization). Let's say that in a regular matrix factorization model, a user $u$ is represented by a single vector $\textbf{x}_{u}$ containing that user's latent factors (see previous posts for more background on this). Now, let's say that we have some demographic information about that user like</p>
+<table>
+<thead><tr>
+<th style="text-align:left">Feature</th>
+<th style="text-align:left">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">gender</td>
+<td style="text-align:left">Female</td>
+</tr>
+<tr>
+<td style="text-align:left">age_bucket</td>
+<td style="text-align:left">25-34</td>
+</tr>
+<tr>
+<td style="text-align:left">income_bucket</td>
+<td style="text-align:left">$65-79K</td>
+</tr>
+</tbody>
+</table>
+<p>We can one-hot-encode each of these features into an "attribute-space" $A$ and assume that each each attribute $a$ has its own latent vector $\textbf{s}_{a}$. Lastly, we make the assumption that our "total" user vector is the original user vector $\textbf{x}_{u}$ plus each of the relevant attribute vectors. If $N(u)$ represents the set of attributes that pertain to user $u$, then the total user vector is</p>
+$$\textbf{x}_{u} + \sum\limits_{a \in N(u)}\textbf{s}_{a}$$<p>One can make the same set of assumptions for side information about the items, and now you can not only achieve better results with your recommendations, but you can also learn vectors and consequently similarities between the side information vectors. For a general overview of this, see a <a href="https://making.dia.co/hiring-data-scientists-a-classification-problem-456affe73592#.pk693a7x0">post</a> I wrote for Dia&amp;Co's <a href="https://making.dia.co/">tech blog</a>.</p>
+<p>Ok, the approach is clear, so presumably we just add this to last post's implicit feedback objective function and solve, right? Well, I ran the math, and unfortunately this is not scalable. With the extra set of side information vectors, last post's Alternating Least Squares (ALS) becomes a three-way alternating problem. There was a special trick in that ALS optimization that exploited the sparsity of the data to scale the computation. Alas, this trick cannot be used during the stage of ALS where one is solving for the side information vectors.</p>
+<p>So what to do now?</p>
+<h2 id="Learning-to-Rank---BPR">Learning to Rank - BPR<a class="anchor-link" href="#Learning-to-Rank---BPR">&#182;</a></h2><p>It turns out that there is another method of optimizing implicit feedback matrix factorization problems which is neither ALS nor conventional stochastic gradient descent (SGD). This method of optimization typically goes by the name <a href="https://en.wikipedia.org/wiki/Learning_to_rank">Learning to Rank</a> and originated in information retrieval theory.</p>
+<p>A classic method of using Learning to Rank with implicit feedback was in the paper <a href="https://arxiv.org/pdf/1205.2618.pdf">BPR: Bayesian Personalized Ranking from Implicit Feedback</a> (pdf link) first-authored by Steffen Rendle who is kind of a badass in all things implicit and factorized. The idea is centered around sampling <em>positive</em> and <em>negative</em> items and running pairwise comparisons. Let's assume that for this example our dataset consists of the number of times users have clicked on various items on a website. BPR proceeds as follows (in simplified form):</p>
+<ol>
+<li>Randomly select a user $u$ and then select a random item $i$ which the user has clicked on. This is our <em>positive</em> item.</li>
+<li>Randomly select an item $j$ which the user has clicked on $fewer$ times than item $i$ (this includes items that they have never clicked). This is our <em>negative</em> item.</li>
+<li>Use whatever equation you want to predict the "score", $p_{ui}$, for user $u$ and positive item $i$. For matrix factorization, this may be $\textbf{x}_{u} \cdot \textbf{y}_{i}$.</li>
+<li>Predict the score for user $u$ and negative item $j$, $p_{uj}$.</li>
+<li>Find the difference between the positive and negative scores $x_{uij} = p_{ui} - p_{uj}$.</li>
+<li>Pass this difference through a sigmoid and use it as a weighting for updating all of the model parameters via stochastic gradient descent (SGD).</li>
+</ol>
+<p>This method seemed kind of radical to me when I first read it. Notably, we do not care about the actual value of the score that we are predicting. All we care about is that we rank items which the user has clicked on more frequently higher than items which the user has clicked on fewer times. And thus, our model "learns to rank" :)</p>
+<p>Because this model employs a sampling-based approach, the authors show that it can be quite fast and scalable relative to other, slower methods. Additionally, the authors argue that BPR directly optimizes the area under the ROC curve (AUC) which could be a desirable characteristic. Most importantly for me, it allows one to easily add in side information without blowing up the computational speed.</p>
+<h2 id="Learning-to-Rank---WARP">Learning to Rank - WARP<a class="anchor-link" href="#Learning-to-Rank---WARP">&#182;</a></h2><p>A close relative of BPR is Weighted Approximate-Rank Pairwise loss (WARP loss) first introduced in <a href="http://www.thespermwhale.com/jaseweston/papers/wsabie-ijcai.pdf">WSABIE: Scaling Up To Large Vocabulary Image Annotation</a> by Weston et. al. WARP is quite similar to BPR: you sample a positive and negative item for a user, predict for both, and take the difference. In BPR you then make the SGD update with this difference as a weight. In WARP, you only run the SGD update if you predict <em>wrong</em>, i.e. you predict the negative item has a higher score than the positive item. If you do not predict wrong, then you keep drawing negative items until you either get the prediction wrong or reach some cutoff value.</p>
+<p>The authors of the WARP paper claim that this process shifts from optimizing AUC in BPR to optimizing the precision @ k. The seems likely more relevant for most recommender systems, and I usually have better luck optimizing WARP loss over BPR loss. WARP does introduce two hyperparameters, though. One is the margin which determines how wrong your prediction must be to implement the SGD update. In the paper, the margin is 1 meaning you must guess $p_{uj} \gt p_{ui} + 1$ to implement the SGD update. The other hyperparameter is the cutoff which determines how many times you're willing to draw negative samples trying to get a wrong prediction before you give up and move on to the next user.</p>
+<p>This sampling approach causes WARP to run quickly when it starts training because you easily get predictions wrong with an untrained model. After training, though, WARP will run slower because it has to sample and predict many items until it gets a wrong prediction and can update. Sounds like a positive problem if it's hard to get your model to predict wrong, though.</p>
+<h2 id="LightFM">LightFM<a class="anchor-link" href="#LightFM">&#182;</a></h2><p>Back to my Birchbox story. I originally implemented BPR with side information in pure numpy and scipy. This proved to be quite slow, and around that time the <a href="https://github.com/lyst/lightfm">LightFM</a> package was open sourced by the people at Lyst. LightFM is written in Cython and is paralellized via HOGWILD SGD. This blew my code out of the water, and I happily switched over to LightFM.</p>
+<p>LightFM uses the same method as above to incorporate side information - it assumes that the total "user vector" is the sum of each of the user's relevant side information vectors (which it calls user "features) and treats the items analogously. Above, we assumed that we had two types of latent vectors: $\textbf{x}_{u}$ and $\textbf{s}_{a}$. LightFM treats everything as side information, or features. If we want to have a specific user vector for user $u$, then we must one-hot-encode that as a single feature for that user.</p>
+<p>Let's go ahead and install LightFM, read in our good old Sketchfab "likes" data as well as the model tags, and see if we can get better results with LightFM than we did last post using classic ALS.</p>
+<h3 id="Installation">Installation<a class="anchor-link" href="#Installation">&#182;</a></h3><p>LightFM is on pypi, so you can install simplest with pip:</p>
+<div class="highlight"><pre><span></span>pip install lightfm
+</pre></div>
+<p>If you are on a mac, then you will unfortunately not be able to run your code in parallel out of the box. If you would like to use parallelization, you must first make sure you have gcc which can be installed with <code>brew</code>:</p>
+<div class="highlight"><pre><span></span>brew install gcc --without-multilib
+</pre></div>
+<p>Be careful, this takes like 30 minutes. The simplest way I've then found to building LightFM is to trick it. First clone the repository</p>
+<div class="highlight"><pre><span></span>git clone git@github.com:lyst/lightfm.git
+</pre></div>
+<p>Then, open <code>setup.py</code> go to where the variable <code>use_openmp</code> is defined, and hard set it to <code>True</code>. Then, <code>cd lightfm &amp;&amp; pip install -e .</code></p>
+<p>With all that done, let's write some code to train some models.</p>
+<h3 id="Data-preprocessing">Data preprocessing<a class="anchor-link" href="#Data-preprocessing">&#182;</a></h3><p>I took a lot of the functions used last time for arranging the Sketchfab data into a matrix and placed them all in a <code>helpers.py</code> file in the rec-a-sketch repo.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">sp</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="k">import</span> <span class="n">expit</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">lightfm</span> <span class="k">import</span> <span class="n">LightFM</span>
+<span class="kn">import</span> <span class="nn">lightfm.evaluation</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../&#39;</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">helpers</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/model_likes_anon.psv&#39;</span><span class="p">,</span>
+                 <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;|&#39;</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
+                 <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[2]:</div>
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>modelname</th>
+      <th>mid</th>
+      <th>uid</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>3D fanart Noel From Sora no Method</td>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>7ac1b40648fff523d7220a5d07b04d9b</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>3D fanart Noel From Sora no Method</td>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>2b4ad286afe3369d39f1bb7aa2528bc7</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3D fanart Noel From Sora no Method</td>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>1bf0993ebab175a896ac8003bed91b4b</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3D fanart Noel From Sora no Method</td>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>6484211de8b9a023a7d9ab1641d22e7c</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>3D fanart Noel From Sora no Method</td>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>1109ee298494fbd192e27878432c718a</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Threshold data to only include users and models with min 5 likes.</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">threshold_interactions_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;uid&#39;</span><span class="p">,</span> <span class="s1">&#39;mid&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Starting interactions info
+Number of rows: 62583
+Number of cols: 28806
+Sparsity: 0.035%
+Ending interactions info
+Number of rows: 15274
+Number of columns: 25655
+Sparsity: 0.140%
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Go from dataframe to likes matrix</span>
+<span class="c1"># Also, build index to ID mappers.</span>
+<span class="n">likes</span><span class="p">,</span> <span class="n">uid_to_idx</span><span class="p">,</span> <span class="n">idx_to_uid</span><span class="p">,</span>\
+<span class="n">mid_to_idx</span><span class="p">,</span> <span class="n">idx_to_mid</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">df_to_matrix</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;uid&#39;</span><span class="p">,</span> <span class="s1">&#39;mid&#39;</span><span class="p">)</span>
+
+<span class="n">likes</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[4]:</div>
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>&lt;15274x25655 sparse matrix of type &#39;&lt;class &#39;numpy.float64&#39;&gt;&#39;
+	with 547477 stored elements in Compressed Sparse Row format&gt;</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">user_index</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">train_test_split</span><span class="p">(</span><span class="n">likes</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">fraction</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>The one odd thing that we must do which is different than last time is to copy the training data to only include users with data in the test set. This is due to using LightFM's built-in <code>precision_at_k</code> function as opposed to our hand-rolled one last time and is not particularly interesting.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">eval_train</span> <span class="o">=</span> <span class="n">train</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">non_eval_users</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">user_index</span><span class="p">))</span>
+
+<span class="n">eval_train</span> <span class="o">=</span> <span class="n">eval_train</span><span class="o">.</span><span class="n">tolil</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">non_eval_users</span><span class="p">:</span>
+    <span class="n">eval_train</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">eval_train</span> <span class="o">=</span> <span class="n">eval_train</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now we want to one-hot-encode all of the side information that we have about the Sketchfab models. Recall that this information included categories and tags associated with each model. The simplest way I've found to go about encoding this information is to use scikit-learn's <a href="http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.DictVectorizer.html">DictVectorizer</a> class. The <code>DictVectorizer</code> takes in a list of dictionaries where the dictionaries contain features names as keys and weights as values. Here, we'll assume that each weight is 1, and we'll take the key to be the combination of the tag type and value.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sideinfo</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/model_feats.psv&#39;</span><span class="p">,</span>
+                       <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;|&#39;</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
+                       <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">sideinfo</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[7]:</div>
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>mid</th>
+      <th>type</th>
+      <th>value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>category</td>
+      <td>Characters</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>category</td>
+      <td>Gaming</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>tag</td>
+      <td>3dsmax</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>tag</td>
+      <td>noel</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+      <td>tag</td>
+      <td>loli</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># There&#39;s probably a fancy pandas groupby way to do</span>
+<span class="c1"># this but I couldn&#39;t figure it out :(</span>
+
+<span class="c1"># Build list of dictionaries containing features </span>
+<span class="c1"># and weights in same order as idx_to_mid prescribes.</span>
+<span class="n">feat_dlist</span> <span class="o">=</span> <span class="p">[{}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">idx_to_mid</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">sideinfo</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+    <span class="n">feat_key</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">mid_to_idx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">mid</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">feat_dlist</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="n">feat_key</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">feat_dlist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[9]:</div>
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>{&#39;category_characters&#39;: 1,
+ &#39;category_gaming&#39;: 1,
+ &#39;tag_3d&#39;: 1,
+ &#39;tag_3dcellshade&#39;: 1,
+ &#39;tag_3dsmax&#39;: 1,
+ &#39;tag_anime&#39;: 1,
+ &#39;tag_girl&#39;: 1,
+ &#39;tag_loli&#39;: 1,
+ &#39;tag_noel&#39;: 1,
+ &#39;tag_soranomethod&#39;: 1}</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.feature_extraction</span> <span class="k">import</span> <span class="n">DictVectorizer</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">dv</span> <span class="o">=</span> <span class="n">DictVectorizer</span><span class="p">()</span>
+<span class="n">item_features</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">feat_dlist</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[12]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">item_features</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[12]:</div>
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>&lt;25655x20352 sparse matrix of type &#39;&lt;class &#39;numpy.float64&#39;&gt;&#39;
+	with 161510 stored elements in Compressed Sparse Row format&gt;</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We are now left with an <code>item_features</code> matrix where each row is a unique item (in the same order as the columns of the <code>likes</code> matrix), and each column is a unique tag. It looks like there are 20352 unique tags!</p>
+<h3 id="Training">Training<a class="anchor-link" href="#Training">&#182;</a></h3><p>Let's try a simple WARP run on LightFM using the default settings and ignoring the item features to start. I am only going to focus on WARP today, as I've never had much luck with BPR. I will create a small function to calculate the learning curve.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[13]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">print_log</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">middle</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">bottom</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+        <span class="n">top</span> <span class="o">+=</span> <span class="s1">&#39;+</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;| {0:^</span><span class="si">{1}</span><span class="s1">} &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;| {0:^</span><span class="si">{1}</span><span class="s1">} &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+              <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+              <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)):</span>
+            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;| {0:^</span><span class="si">{1}</span><span class="s1">.5f} &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">&#39;+</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
+    <span class="n">top</span> <span class="o">+=</span> <span class="s1">&#39;+&#39;</span>
+    <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;|&#39;</span>
+    <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">&#39;+&#39;</span>
+    <span class="k">if</span> <span class="n">header</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">top</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">middle</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">bottom</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">middle</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">top</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">patk_learning_curve</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">eval_train</span><span class="p">,</span>
+                        <span class="n">iterarray</span><span class="p">,</span> <span class="n">user_features</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">item_features</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                        <span class="o">**</span><span class="n">fit_params</span><span class="p">):</span>
+    <span class="n">old_epoch</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">train_patk</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">test_patk</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span> <span class="s1">&#39;train p@5&#39;</span><span class="p">,</span> <span class="s1">&#39;test p@5&#39;</span><span class="p">]</span>
+    <span class="n">print_log</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="n">iterarray</span><span class="p">:</span>
+        <span class="n">more</span> <span class="o">=</span> <span class="n">epoch</span> <span class="o">-</span> <span class="n">old_epoch</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">fit_partial</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">user_features</span><span class="o">=</span><span class="n">user_features</span><span class="p">,</span>
+                          <span class="n">item_features</span><span class="o">=</span><span class="n">item_features</span><span class="p">,</span>
+                          <span class="n">epochs</span><span class="o">=</span><span class="n">more</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">)</span>
+        <span class="n">this_test</span> <span class="o">=</span> <span class="n">lightfm</span><span class="o">.</span><span class="n">evaluation</span><span class="o">.</span><span class="n">precision_at_k</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">train_interactions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">this_train</span> <span class="o">=</span> <span class="n">lightfm</span><span class="o">.</span><span class="n">evaluation</span><span class="o">.</span><span class="n">precision_at_k</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">eval_train</span><span class="p">,</span> <span class="n">train_interactions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span>
+
+        <span class="n">train_patk</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">this_train</span><span class="p">))</span>
+        <span class="n">test_patk</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">this_test</span><span class="p">))</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">train_patk</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">test_patk</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">print_log</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">train_patk</span><span class="p">,</span> <span class="n">test_patk</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;warp&#39;</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">2016</span><span class="p">)</span>
+<span class="c1"># Initialize model.</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">0</span><span class="p">);</span>
+
+<span class="n">iterarray</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">110</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+<span class="n">model</span><span class="p">,</span> <span class="n">train_patk</span><span class="p">,</span> <span class="n">test_patk</span> <span class="o">=</span> <span class="n">patk_learning_curve</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">eval_train</span><span class="p">,</span> <span class="n">iterarray</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s1">&#39;num_threads&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>+------------+------------+------------+
+|   Epoch    | train p@5  |  test p@5  |
++============+============+============+
+|     10     |  0.14303   |  0.02541   |
++------------+------------+------------+
+|     20     |  0.16267   |  0.02947   |
++------------+------------+------------+
+|     30     |  0.16876   |  0.03183   |
++------------+------------+------------+
+|     40     |  0.17282   |  0.03294   |
++------------+------------+------------+
+|     50     |  0.17701   |  0.03333   |
++------------+------------+------------+
+|     60     |  0.17872   |  0.03287   |
++------------+------------+------------+
+|     70     |  0.17583   |  0.03333   |
++------------+------------+------------+
+|     80     |  0.17793   |  0.03386   |
++------------+------------+------------+
+|     90     |  0.17479   |  0.03392   |
++------------+------------+------------+
+|    100     |  0.17656   |  0.03301   |
++------------+------------+------------+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_style</span><span class="p">(</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">plot_patk</span><span class="p">(</span><span class="n">iterarray</span><span class="p">,</span> <span class="n">patk</span><span class="p">,</span>
+              <span class="n">title</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">iterarray</span><span class="p">,</span> <span class="n">patk</span><span class="p">);</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">);</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Epochs&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;p@</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">);</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">);</span>
+
+<span class="c1"># Plot train on left</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_figure</span><span class="p">();</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">(</span><span class="n">fig</span><span class="p">);</span>
+<span class="n">plot_patk</span><span class="p">(</span><span class="n">iterarray</span><span class="p">,</span> <span class="n">train_patk</span><span class="p">,</span>
+         <span class="s1">&#39;Train&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="c1"># Plot test on right</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_figure</span><span class="p">();</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">(</span><span class="n">fig</span><span class="p">);</span>
+<span class="n">plot_patk</span><span class="p">(</span><span class="n">iterarray</span><span class="p">,</span> <span class="n">test_patk</span><span class="p">,</span>
+         <span class="s1">&#39;Test&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">();</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+
+
+<div class="output_png output_subarea ">
+<img src="data:image/png;base64,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
+"
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Optimizing-Hyperparameters-with-scikit-optimize">Optimizing Hyperparameters with <code>scikit-optimize</code><a class="anchor-link" href="#Optimizing-Hyperparameters-with-scikit-optimize">&#182;</a></h2><p>Now that we have a baseline, we would like to find optimal hyperparameters to maximize our p@k. On a side note, I'm not sure if precision at k is the best metric to be using here when all of our interactions are binary, but let's just ignore that for now...</p>
+<p>Last post I ran a grid search over a bunch of hyperparameters, and it took forever. It's been shown that a randomized search is better than explicit grid search, but we can do even better. Using the <a href="https://scikit-optimize.github.io/">scikit-optimize</a> (<code>skopt</code>) library, we can treat the hyperpameters as free parameters to search over while using a black box optimization algorithm to maximize p@k. There are a number of optimization algorithms to pick from, but I'll just stick with <code>forest_minimize</code> today.</p>
+<p>The setup is pretty simple. You must first define an objective function that you want to minimize. The objective receives the parameters that you want to solve for as the arguments and returns the objective value at those parameters. Thus, for our case, we pass in the hyperparameters, we train the <code>LightFM</code> model with those parameters, and then return the p@k evaluated after training. Importantly, we must return the negative of the p@k because the objective must be <em>minimized</em>, so maximizing p@k is the same as minimizing the negative of the p@k. The last thing to note is that one must make liberal use of global variables because one can only pass hyperparameters to the objective function.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">skopt</span> <span class="k">import</span> <span class="n">forest_minimize</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[17]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">objective</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+    <span class="c1"># unpack</span>
+    <span class="n">epochs</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span>\
+    <span class="n">no_components</span><span class="p">,</span> <span class="n">alpha</span> <span class="o">=</span> <span class="n">params</span>
+    
+    <span class="n">user_alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+    <span class="n">item_alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;warp&#39;</span><span class="p">,</span>
+                    <span class="n">random_state</span><span class="o">=</span><span class="mi">2016</span><span class="p">,</span>
+                    <span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
+                    <span class="n">no_components</span><span class="o">=</span><span class="n">no_components</span><span class="p">,</span>
+                    <span class="n">user_alpha</span><span class="o">=</span><span class="n">user_alpha</span><span class="p">,</span>
+                    <span class="n">item_alpha</span><span class="o">=</span><span class="n">item_alpha</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+              <span class="n">num_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="n">patks</span> <span class="o">=</span> <span class="n">lightfm</span><span class="o">.</span><span class="n">evaluation</span><span class="o">.</span><span class="n">precision_at_k</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span>
+                                              <span class="n">train_interactions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                              <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">mapatk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">patks</span><span class="p">)</span>
+    <span class="c1"># Make negative because we want to _minimize_ objective</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="o">-</span><span class="n">mapatk</span>
+    <span class="c1"># Handle some weird numerical shit going on</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">out</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.01</span> <span class="ow">or</span> <span class="n">out</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">out</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>With the objective function defined, we can define ranges for our hyperparameters. These can either be simple max and mins or we can assume a distribution like below. With the ranges defined, we simple call <code>forest_minimize</code> and wait a pretty long time.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[18]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">space</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">260</span><span class="p">),</span> <span class="c1"># epochs</span>
+         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">4</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">),</span> <span class="c1"># learning_rate</span>
+         <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span> <span class="c1"># no_components</span>
+         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">),</span> <span class="c1"># alpha</span>
+        <span class="p">]</span>
+
+<span class="n">res_fm</span> <span class="o">=</span> <span class="n">forest_minimize</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">space</span><span class="p">,</span> <span class="n">n_calls</span><span class="o">=</span><span class="mi">250</span><span class="p">,</span>
+                     <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                     <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[19]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Maximimum p@k found: </span><span class="si">{:6.5f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">-</span><span class="n">res_fm</span><span class="o">.</span><span class="n">fun</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Optimal parameters:&#39;</span><span class="p">)</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;epochs&#39;</span><span class="p">,</span> <span class="s1">&#39;learning_rate&#39;</span><span class="p">,</span> <span class="s1">&#39;no_components&#39;</span><span class="p">,</span> <span class="s1">&#39;alpha&#39;</span><span class="p">]</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">res_fm</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Maximimum p@k found: 0.04781
+Optimal parameters:
+epochs: 168
+learning_rate: 0.09126423099690231
+no_components: 104
+alpha: 0.00023540795300720628
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>No too shabby! We started with a p@k of ~0.034 with base hyperparameters, and then increased it to 0.0478 by finding better ones. Let's see what happens if we add in our item features as side information to the matrix factorization model.</p>
+<h2 id="Learning-to-Rank-+-Side-Information">Learning to Rank + Side Information<a class="anchor-link" href="#Learning-to-Rank-+-Side-Information">&#182;</a></h2><p><code>LightFM</code> makes certain subtle assumptions when you do or do not pass side information. When no <code>user_features</code> or <code>item_features</code> are explicitly included, then <code>LightFM</code> assumes that both feature matrices are in fact identity matrices of size (<code>num_users</code> X <code>num_users</code>) or (<code>num_items</code> X <code>num_items</code>) for user and item feature matrices, respectively. What this is effectively doing is one-hot-encoding each user and item ID as a single feature vector. In the case where you do pass an <code>item_features</code> matrix, then <code>LightFM</code> does not do any one-hot-encoding. Thus, each user and item ID does not get its own vector unless you explicitly define one. The easiest way to do this is to make your own identity matrix and stack it on the side of the <code>item_features</code> matrix that we already created. This way, each item is described by a single vector for its unique ID and then a set of vectors for each of its tags.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[20]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Need to hstack item_features</span>
+<span class="n">eye</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">item_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">item_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+<span class="n">item_features_concat</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">eye</span><span class="p">,</span> <span class="n">item_features</span><span class="p">))</span>
+<span class="n">item_features_concat</span> <span class="o">=</span> <span class="n">item_features_concat</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We now need to define a new objective function that incorporates the <code>item_features</code>.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[21]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">objective_wsideinfo</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+    <span class="c1"># unpack</span>
+    <span class="n">epochs</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span>\
+    <span class="n">no_components</span><span class="p">,</span> <span class="n">item_alpha</span><span class="p">,</span>\
+    <span class="n">scale</span> <span class="o">=</span> <span class="n">params</span>
+    
+    <span class="n">user_alpha</span> <span class="o">=</span> <span class="n">item_alpha</span> <span class="o">*</span> <span class="n">scale</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;warp&#39;</span><span class="p">,</span>
+                    <span class="n">random_state</span><span class="o">=</span><span class="mi">2016</span><span class="p">,</span>
+                    <span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
+                    <span class="n">no_components</span><span class="o">=</span><span class="n">no_components</span><span class="p">,</span>
+                    <span class="n">user_alpha</span><span class="o">=</span><span class="n">user_alpha</span><span class="p">,</span>
+                    <span class="n">item_alpha</span><span class="o">=</span><span class="n">item_alpha</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+              <span class="n">item_features</span><span class="o">=</span><span class="n">item_features_concat</span><span class="p">,</span>
+              <span class="n">num_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="n">patks</span> <span class="o">=</span> <span class="n">lightfm</span><span class="o">.</span><span class="n">evaluation</span><span class="o">.</span><span class="n">precision_at_k</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span>
+                                              <span class="n">item_features</span><span class="o">=</span><span class="n">item_features_concat</span><span class="p">,</span>
+                                              <span class="n">train_interactions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                              <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">mapatk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">patks</span><span class="p">)</span>
+    <span class="c1"># Make negative because we want to _minimize_ objective</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="o">-</span><span class="n">mapatk</span>
+    <span class="c1"># Weird shit going on</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">out</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.01</span> <span class="ow">or</span> <span class="n">out</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">out</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>With that defined, let's now run a new hyperparameter search. I will add an extra scaling parameter which will control the scaling between the user and item item regularization (alpha) terms. Because of all of the extra item features, we may want to regularize things differently. We'll also input an <code>x0</code> term to <code>forest_minimization</code> which will allow us to start our hyperparameter search at the optimal parameters from the previous run without side information.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[22]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">space</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">260</span><span class="p">),</span> <span class="c1"># epochs</span>
+         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">),</span> <span class="c1"># learning_rate</span>
+         <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span> <span class="c1"># no_components</span>
+         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">),</span> <span class="c1"># item_alpha</span>
+         <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">)</span> <span class="c1"># user_scaling</span>
+        <span class="p">]</span>
+<span class="n">x0</span> <span class="o">=</span> <span class="n">res_fm</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">1.</span><span class="p">)</span>
+<span class="c1"># This typecast is required</span>
+<span class="n">item_features</span> <span class="o">=</span> <span class="n">item_features</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">res_fm_itemfeat</span> <span class="o">=</span> <span class="n">forest_minimize</span><span class="p">(</span><span class="n">objective_wsideinfo</span><span class="p">,</span> <span class="n">space</span><span class="p">,</span> <span class="n">n_calls</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+                                  <span class="n">x0</span><span class="o">=</span><span class="n">x0</span><span class="p">,</span>
+                                  <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                  <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Maximimum p@k found: </span><span class="si">{:6.5f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">-</span><span class="n">res_fm_itemfeat</span><span class="o">.</span><span class="n">fun</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Optimal parameters:&#39;</span><span class="p">)</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;epochs&#39;</span><span class="p">,</span> <span class="s1">&#39;learning_rate&#39;</span><span class="p">,</span> <span class="s1">&#39;no_components&#39;</span><span class="p">,</span> <span class="s1">&#39;item_alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;scaling&#39;</span><span class="p">]</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">res_fm_itemfeat</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Maximimum p@k found: 0.04610
+Optimal parameters:
+epochs: 192
+learning_rate: 0.06676184785227865
+no_components: 86
+item_alpha: 0.0005563892936299544
+scaling: 0.6960826359109953
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now, you might be thinking "Ethan, we went through all that only to get <em>worse</em> p@k?!", and, frankly, I share your frustration. I've actually seen this happen before - adding side information will sometimes reduce or at least not increase whatever metric you're looking for. In all fairness, I only ran the above optimization for 50 calls, as opposed to the original one with 250 calls. This was mainly due to the matrix factorization model running much slower due to scaling with the number of user and item features.</p>
+<p>Even so, there are other reasons that the results could be worse. Maybe user behavior is a much better signal than human-defined tags and categories. The tag information could be poor for some of the models. As well, one may need to scale the tags <em>differently</em> compared to the unique ID vectors using, say, separate regularization terms, in order to get better behavior. Maybe one should normalize the tag weights by the number of tags. Maybe tags should not be included unless they have been used on at least <code>X</code> models. Maybe tags should only be included on models with few user interactions because after that ponit the cold start problem is sufficiently null. Who knows?! These are experiments I'd love to run, but I'd be happy to hear from others' experience.</p>
+<h2 id="Fun-with-Feature-Embeddings">Fun with Feature Embeddings<a class="anchor-link" href="#Fun-with-Feature-Embeddings">&#182;</a></h2><p>Regardless of all of this, there is still a benefit to incorporating the item features. Because they have vectors embedded in the same space as the users and items, we can play with different types of recommendations. We'll first retrain the model on the full dataset using the optimal parameters.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[24]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">epochs</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span>\
+<span class="n">no_components</span><span class="p">,</span> <span class="n">item_alpha</span><span class="p">,</span>\
+<span class="n">scale</span> <span class="o">=</span> <span class="n">res_fm_itemfeat</span><span class="o">.</span><span class="n">x</span>
+
+<span class="n">user_alpha</span> <span class="o">=</span> <span class="n">item_alpha</span> <span class="o">*</span> <span class="n">scale</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;warp&#39;</span><span class="p">,</span>
+                <span class="n">random_state</span><span class="o">=</span><span class="mi">2016</span><span class="p">,</span>
+                <span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
+                <span class="n">no_components</span><span class="o">=</span><span class="n">no_components</span><span class="p">,</span>
+                <span class="n">user_alpha</span><span class="o">=</span><span class="n">user_alpha</span><span class="p">,</span>
+                <span class="n">item_alpha</span><span class="o">=</span><span class="n">item_alpha</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">likes</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+          <span class="n">item_features</span><span class="o">=</span><span class="n">item_features_concat</span><span class="p">,</span>
+          <span class="n">num_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Feature-Sorting">Feature Sorting<a class="anchor-link" href="#Feature-Sorting">&#182;</a></h3><p>Imagine you're on Sketchfab and click the tag <a href="https://sketchfab.com/tags/tiltbrush">tiltbrush</a> which would presumably correspond to models created with Google's <a href="https://www.tiltbrush.com/">Tilt Brush</a> VR appliction. How should Sketchfab return the results to you? They currently return results based on the popularity of the items which is presumably not connected to the "tiltbrushiness" of the models. With the factorized tags, we can now return a list of products that are <em>most similar</em> to the tiltbrush tag sorted by that similarity. To do this, we must find the tiltbrush vector and measure the cosine similarity to every product.</p>
+<p>Recall that we tacked our identity matrix onto the left-hand side of the item_features matrix. This means that our <code>DictVectorizer</code>, which mapped our item features to column indices of our <code>item_features</code> matrix, will have indices that are off by the number of items.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[25]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">idx</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">vocabulary_</span><span class="p">[</span><span class="s1">&#39;tag_tiltbrush&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">item_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Next, we need to calculate the cosine similarity between the tiltbrush vector and all other item <em>representations</em> where each item's representation is the sum of its feature vectors. These feature vectors are stored as <code>item_embeddings</code> in the LightFM model. (<em>Note: there are technically bias terms in the LightFM model that we are simply ignoring for now</em>).</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[26]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">cosine_similarity</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">mat</span><span class="p">):</span>
+    <span class="n">sim</span> <span class="o">=</span> <span class="n">vec</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">mat</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">matnorm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">vecnorm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">vec</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">sim</span> <span class="o">/</span> <span class="n">matnorm</span> <span class="o">/</span> <span class="n">vecnorm</span><span class="p">)</span>
+
+<span class="n">tilt_vec</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">item_embeddings</span><span class="p">[[</span><span class="n">idx</span><span class="p">],</span> <span class="p">:]</span>
+<span class="n">item_representations</span> <span class="o">=</span> <span class="n">item_features_concat</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">item_embeddings</span><span class="p">)</span>
+<span class="n">sims</span> <span class="o">=</span> <span class="n">cosine_similarity</span><span class="p">(</span><span class="n">tilt_vec</span><span class="p">,</span> <span class="n">item_representations</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Lastly, we can repurpose some code from the last blog post to visualize the top 5 Sketchfab model thumbnails that are most similar to the tiltbrush vector.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[27]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">requests</span>
+<span class="k">def</span> <span class="nf">get_thumbnails</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">idx_to_mid</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">thumbs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">mids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">row</span><span class="p">)[:</span><span class="n">N</span><span class="p">]:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://sketchfab.com/i/models/</span><span class="si">{}</span><span class="s1">&#39;</span>\
+                                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_to_mid</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="n">thumb</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;thumbnails&#39;</span><span class="p">][</span><span class="s1">&#39;images&#39;</span><span class="p">]</span>
+                 <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span><span class="o">==</span><span class="mi">200</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">thumb</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;no thumbnail&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">thumb</span> <span class="o">=</span> <span class="n">thumb</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">thumbs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thumb</span><span class="p">)</span>
+        <span class="n">mids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx_to_mid</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">thumbs</span><span class="p">,</span> <span class="n">mids</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[28]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">IPython.display</span> <span class="k">import</span> <span class="n">display</span><span class="p">,</span> <span class="n">HTML</span>
+
+<span class="k">def</span> <span class="nf">display_thumbs</span><span class="p">(</span><span class="n">thumbs</span><span class="p">,</span> <span class="n">mids</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">thumb_html</span> <span class="o">=</span> <span class="s2">&quot;&lt;a href=&#39;</span><span class="si">{}</span><span class="s2">&#39; target=&#39;_blank&#39;&gt;</span><span class="se">\</span>
+<span class="s2">                  &lt;img style=&#39;width: 160px; margin: 0px; </span><span class="se">\</span>
+<span class="s2">                  float: left; border: 1px solid black;&#39; </span><span class="se">\</span>
+<span class="s2">                  src=&#39;</span><span class="si">{}</span><span class="s2">&#39; /&gt;&lt;/a&gt;&quot;</span>
+    <span class="n">images</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">mid</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">thumbs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">N</span><span class="p">],</span> <span class="n">mids</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">N</span><span class="p">]):</span>
+        <span class="n">link</span> <span class="o">=</span> <span class="s1">&#39;http://sketchfab.com/models/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span>
+        <span class="n">images</span> <span class="o">+=</span> <span class="n">thumb_html</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">link</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">images</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[29]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">display_thumbs</span><span class="p">(</span><span class="o">*</span><span class="n">get_thumbnails</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">idx_to_mid</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+
+<div class="output_html rendered_html output_subarea ">
+<a href='http://sketchfab.com/models/62d12cbb47df40d2bb40e8f66012cc09' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/62d12cbb47df40d2bb40e8f66012cc09/dist/thumbnails/a5f50c4a3fea457ba69e988557d7786f/200x200.jpeg' /></a><a href='http://sketchfab.com/models/f09ebdff0e9d40379979c45e721d72c4' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/f09ebdff0e9d40379979c45e721d72c4/dist/thumbnails/3189939b3a6b4a8ca09e2e9add51996a/200x200.jpeg' /></a><a href='http://sketchfab.com/models/62415539695042b48ad62675bff74105' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/62415539695042b48ad62675bff74105/dist/thumbnails/0714f92895754617b20ce2f3539422ba/200x200.jpeg' /></a><a href='http://sketchfab.com/models/a28b3a0fa83443df97c98068f23d62e8' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/a28b3a0fa83443df97c98068f23d62e8/dist/thumbnails/cea404d90af94b70a68da475ed09fe82/200x200.jpeg' /></a><a href='http://sketchfab.com/models/b27ee46609814315b207bca92ffc767b' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/b27ee46609814315b207bca92ffc767b/dist/thumbnails/62b6fb7095384266a8321dcf7bc17d18/200x200.jpeg' /></a>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Pretty cool! Looks like each of these are made with Tiltbrush. Feel free to click the above images to check out each model on the Sketchfab website.</p>
+<p>What else can we do?</p>
+<h3 id="Tag-Suggestions">Tag Suggestions<a class="anchor-link" href="#Tag-Suggestions">&#182;</a></h3><p>Let's say that Sketchfab would like to encourage people to use more tags. This is advantageous to the company because it get users to create structured data for them for free while engaging the user. Sketchfab could encourage this behavior by suggesting tags to go with an image. One way we could do this would be to take a model and suggest tags to go with it that are not currently there. This involves finding tag vectors that are most similar to the model and then filtering tags that are already present.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[30]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">idx</span> <span class="o">=</span> <span class="mi">900</span>
+<span class="n">mid</span> <span class="o">=</span> <span class="n">idx_to_mid</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+<span class="k">def</span> <span class="nf">display_single</span><span class="p">(</span><span class="n">mid</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Display thumbnail for a single model&quot;&quot;&quot;</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://sketchfab.com/i/models/</span><span class="si">{}</span><span class="s1">&#39;</span>\
+                            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mid</span><span class="p">))</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+    <span class="n">thumb</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;thumbnails&#39;</span><span class="p">][</span><span class="s1">&#39;images&#39;</span><span class="p">]</span>
+             <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span><span class="o">==</span><span class="mi">200</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">thumb_html</span> <span class="o">=</span> <span class="s2">&quot;&lt;a href=&#39;</span><span class="si">{}</span><span class="s2">&#39; target=&#39;_blank&#39;&gt;</span><span class="se">\</span>
+<span class="s2">                  &lt;img style=&#39;width: 200px; margin: 0px; </span><span class="se">\</span>
+<span class="s2">                  float: left; border: 1px solid black;&#39; </span><span class="se">\</span>
+<span class="s2">                  src=&#39;</span><span class="si">{}</span><span class="s2">&#39; /&gt;&lt;/a&gt;&quot;</span>
+    <span class="n">link</span> <span class="o">=</span> <span class="s1">&#39;http://sketchfab.com/models/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">thumb_html</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">link</span><span class="p">,</span> <span class="n">thumb</span><span class="p">)))</span>
+
+<span class="n">display_single</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span>
+
+<span class="c1"># Make mapper to map from from feature index to feature name</span>
+<span class="n">idx_to_feat</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dv</span><span class="o">.</span><span class="n">vocabulary_</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Tags:&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">item_features</span><span class="o">.</span><span class="n">getrow</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;- </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_to_feat</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+
+<div class="output_html rendered_html output_subarea ">
+<a href='http://sketchfab.com/models/381cbf8a06f042b9b41932f1f7ada997' target='_blank'><img style='width: 200px; margin: 0px;               float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/381cbf8a06f042b9b41932f1f7ada997/dist/thumbnails/5b486753baca47e9ad175a279a61eb11/200x200.jpeg' /></a>
+</div>
+
+</div>
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Tags:
+- category_architecture
+- category_characters
+- category_cultural heritage
+- category_products &amp; technology
+- category_science, nature &amp; education
+- tag_rock
+- tag_sculpture
+- tag_woman
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[31]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Indices of all tag vectors</span>
+<span class="n">tag_indices</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">v</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dv</span><span class="o">.</span><span class="n">vocabulary_</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                  <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;tag_&#39;</span><span class="p">))</span>
+<span class="c1"># Tags that are already present</span>
+<span class="n">filter_tags</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">item_features</span><span class="o">.</span><span class="n">getrow</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
+
+<span class="n">item_representation</span> <span class="o">=</span> <span class="n">item_features_concat</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">item_embeddings</span><span class="p">)</span>
+<span class="n">sims</span> <span class="o">=</span> <span class="n">cosine_similarity</span><span class="p">(</span><span class="n">item_representation</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">item_embeddings</span><span class="p">)</span>
+
+<span class="n">suggested_tags</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">recs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">sims</span><span class="p">)</span>
+<span class="n">n_items</span> <span class="o">=</span> <span class="n">item_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">suggested_tags</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+    <span class="n">offset_idx</span> <span class="o">=</span> <span class="n">recs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">n_items</span>
+    <span class="k">if</span> <span class="n">offset_idx</span> <span class="ow">in</span> <span class="n">tag_indices</span>\
+       <span class="ow">and</span> <span class="n">offset_idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">filter_tags</span><span class="p">:</span>
+        <span class="n">suggested_tags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx_to_feat</span><span class="p">[</span><span class="n">offset_idx</span><span class="p">])</span>
+    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Suggested Tags:&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">suggested_tags</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;- </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Suggested Tags:
+- tag_greek
+- tag_castel
+- tag_santangelo
+- tag_eros
+- tag_humanti
+- tag_galleria
+- tag_batholith
+- tag_rome
+- tag_substanced880
+- tag_roman
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Quick-conclusion">Quick conclusion<a class="anchor-link" href="#Quick-conclusion">&#182;</a></h2><p>So this post was long. There was a lot to learn and a lot of parameters to optimize. I'd like to note that, in terms of out of the box performance, it's hard to beat the ALS model from last post. There's fewer parameters to optimize, and the model is much more "forgiving" of being a bit off in your hyperparameters. Contrastingly, if your learning rate is poor, then SGD will give you <em>nothing</em> in return. It is definitely possible to beat ALS in performance, though, if you spend enough time fiddling around. Moreover, the ability to incorporate side information is important for being able to make new types of recommendations and overcome the cold start problem, so it's good to have this in your toolbox.</p>
+
+</div>
+</div>
+</div></p>
                 <div class="clear"></div>
 
                 <div class="info">
-                </div>
-            </article>            <h4 class="date">Oct 06, 2014</h4>
-
-            <article class="post">
-                <h2 class="title">
-                    <a href="http://blog.ethanrosenthal.com/2014/10/06/festival-chatter-part3/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension&quot;">Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension</a>
-                </h2>
-
-                <p>In this series of posts (<a href="http://blog.ethanrosenthal.com/2014/08/31/festival-chatter-part1/">part 1</a>, <a href="http://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/">part 2</a>), I have been showing how to use Python and other data scientist tools to analyze a collection of tweets related to the 2014 Bonnaroo Music and Arts Festival. So far, the investigation has been limited to summary data of the full ...</p>
-                <div class="clear"></div>
-
-                <div class="info">
-                </div>
-            </article>            <h4 class="date">Sep 09, 2014</h4>
-
-            <article class="post">
-                <h2 class="title">
-                    <a href="http://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 2) - Evaluating Band Popularity from Bonnaroo Tweets&quot;">Festival Chatter (Part 2) - Evaluating Band Popularity from Bonnaroo Tweets</a>
-                </h2>
-
-                <p>In my previous <a href="http://blog.ethanrosenthal.com/2014/08/31/festival-chatter-part1/">post</a>, I wrote about how I collected tweets about the Bonnaroo Music and Arts Festival during the entirety of the festival. There are a wide range of questions that could be answered by this dataset, like</p>
-<ul>
-<li>Do people spell worse as they become more intoxicated throughout the ...</li></ul>
-                <div class="clear"></div>
-
-                <div class="info">
-                </div>
-            </article>            <h4 class="date">Aug 31, 2014</h4>
-
-            <article class="post">
-                <h2 class="title">
-                    <a href="http://blog.ethanrosenthal.com/2014/08/31/festival-chatter-part1/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 1) - Collecting Bonnaroo Tweets from the Streaming Twitter API&quot;">Festival Chatter (Part 1) - Collecting Bonnaroo Tweets from the Streaming Twitter API</a>
-                </h2>
-
-                <p>It seems like summer music festivals get more and more popular every year. I guess this could be the subject of its own post, but let's stick with my personal anecdotal evidence for the time being. I remember only a handful of music festivals in the U.S. when ...</p>
-                <div class="clear"></div>
-
-                <div class="info">
-                </div>
-            </article>            <h4 class="date">Aug 22, 2014</h4>
-
-            <article class="post">
-                <h2 class="title">
-                    <a href="http://blog.ethanrosenthal.com/2014/08/22/hello-world/" rel="bookmark" title="Permanent Link to &quot;Setting up a website and separate blog repository hosted on GitHub&quot;">Setting up a website and separate blog repository hosted on GitHub</a>
-                </h2>
-
-                <p>As the title of the blog suggests, I would like to use this space to write about anything "data"-related that piques my interest. Likely, this will consist of personal and academic projects.</p>
-<p>As the title of this post suggests, I would like to explain how I created this blog ...</p>
-                <div class="clear"></div>
-
-                <div class="info">
+                    <a href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/">posted on Nov 07, 2016</a>
                 </div>
             </article>
-
-                <div class="clear"></div>
-                <div class="pages">
-
-                    <a href="http://blog.ethanrosenthal.com/" class="prev_page">&larr;&nbsp;Previous</a>
-                    <span>Page 2 of 2</span>
-                </div>
-
             <div class="clear"></div>
             <footer>
                 <p>
