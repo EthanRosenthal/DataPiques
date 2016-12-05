@@ -1,5 +1,771 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Data Piques</title><link href="http://blog.ethanrosenthal.com/" rel="alternate"></link><link href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" rel="self"></link><id>http://blog.ethanrosenthal.com/</id><updated>2016-11-07T00:00:00-05:00</updated><entry><title>Learning to Rank Sketchfab Models with LightFM</title><link href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/" rel="alternate"></link><updated>2016-11-07T00:00:00-05:00</updated><author><name>Ethan Rosenthal</name></author><id>tag:blog.ethanrosenthal.com,2016-11-07:2016/11/07/implicit-mf-part-2/</id><summary type="html">&lt;p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Data Piques</title><link href="http://blog.ethanrosenthal.com/" rel="alternate"></link><link href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" rel="self"></link><id>http://blog.ethanrosenthal.com/</id><updated>2016-12-05T00:00:00-05:00</updated><entry><title>Using Keras' Pretrained Neural Networks for Visual Similarity Recommendations</title><link href="http://blog.ethanrosenthal.com/2016/12/05/recasketch-keras/" rel="alternate"></link><updated>2016-12-05T00:00:00-05:00</updated><author><name>Ethan Rosenthal</name></author><id>tag:blog.ethanrosenthal.com,2016-12-05:2016/12/05/recasketch-keras/</id><summary type="html">&lt;p&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;To close out our series on building recommendation models using &lt;a href="http://blog.ethanrosenthal.com/2016/10/09/likes-out-guerilla-dataset/"&gt;Sketchfab data&lt;/a&gt;, I will venture far from the &lt;a href="http://blog.ethanrosenthal.com/2016/10/19/implicit-mf-part-1/"&gt;previous&lt;/a&gt; &lt;a href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/"&gt;posts'&lt;/a&gt; factorization-based methods and instead explore an unsupervised, deep learning-based model. You'll find that the implementation is fairly simple with remarkably promising results which is almost a smack in the face to all of that effort put in earlier.&lt;/p&gt;
+&lt;p&gt;We are going to build a model-to-model recommender using thumbnail images of 3D &lt;a href="https://sketchfab.com"&gt;Sketchfab&lt;/a&gt; models as our input and the &lt;em&gt;visual similarity&lt;/em&gt; between models as our recommendation score. I was inspired to do this after reading Christopher Bonnett's &lt;a href="http://cbonnett.github.io/Insight.html"&gt;post&lt;/a&gt; on product classification, so we will follow a similar approach.&lt;/p&gt;
+&lt;p&gt;Since our goal is to measure visual similarity, we will need to generate features from our images and then calculate some similarity measure between different images using said features. Back in the day, maybe one would employ fancy wavelets or SIFT keypoints or something for creating features, but this is the Era of Deep Learning and manual feature extraction is for old people.&lt;/p&gt;
+&lt;p&gt;Staying on-trend, we will use a pretrained neural network (NN) to extract features. The NN was originally trained to classify images among 1000 labels (e.g. "dog", "train", etc...). We'll chop off the last 3 fully-connected layers of the network which do the final mapping between deep features and class labels and use the fourth-to-last layer as a long feature vector describing our images.&lt;/p&gt;
+&lt;p&gt;Thankfully, all of this is extremely simple to do with the pretrained models in &lt;a href="https://keras.io/"&gt;Keras&lt;/a&gt;. Keras allows one to easily build deep learning models on top of either Tensorflow or Theano. Keras also now comes with pretrained models that can be loaded and used. For more information about the available models, visit the &lt;a href="https://keras.io/applications/"&gt;Applications&lt;/a&gt; section of the documentation. For our purposes, we'll use the &lt;a href="https://keras.io/applications/#vgg16"&gt;VGG16&lt;/a&gt; model because that's what other people seemed to use and I don't know enough to have a compelling reason to stray from the norm.&lt;/p&gt;
+&lt;p&gt;Our task is now as follows:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Load and process images&lt;/li&gt;
+&lt;li&gt;Feed images through NN.&lt;/li&gt;
+&lt;li&gt;Calculate image similarities.&lt;/li&gt;
+&lt;li&gt;Recommend models!&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="Load-and-process-images"&gt;Load and process images&lt;a class="anchor-link" href="#Load-and-process-images"&gt;&amp;#182;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;The first step, which we won't go through here, was to download all of the image thumbnails. There seems to be a standard thumbnail for each Sketchfab model accessible via their API, so I added a function to the &lt;a href="https://github.com/EthanRosenthal/rec-a-sketch"&gt;rec-a-sketch&lt;/a&gt; &lt;a href="https://github.com/EthanRosenthal/rec-a-sketch/blob/master/crawl.py"&gt;crawl.py&lt;/a&gt; script to automate downloading of all the thumbnails.&lt;/p&gt;
+&lt;p&gt;Let's load in our libraries and take a look at one of these images.&lt;/p&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[1]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;csv&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;sys&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;requests&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;skimage.io&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;glob&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;pickle&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;time&lt;/span&gt;
+
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;IPython.display&lt;/span&gt; &lt;span class="k"&gt;import&lt;/span&gt; &lt;span class="n"&gt;display&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Image&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;HTML&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;keras.applications&lt;/span&gt; &lt;span class="k"&gt;import&lt;/span&gt; &lt;span class="n"&gt;VGG16&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;keras.applications.vgg16&lt;/span&gt; &lt;span class="k"&gt;import&lt;/span&gt; &lt;span class="n"&gt;preprocess_input&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;keras.preprocessing&lt;/span&gt; &lt;span class="k"&gt;import&lt;/span&gt; &lt;span class="n"&gt;image&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;kimage&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;numpy&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="nn"&gt;np&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;pandas&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="nn"&gt;pd&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;scipy.sparse&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="nn"&gt;sp&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;skimage.io&lt;/span&gt;
+
+&lt;span class="n"&gt;sys&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;../&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;helpers&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[2]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;rand_img&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;random&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;choice&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;glob&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;glob&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;../data/model_thumbs/*_thumb200.jpg&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[3]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;Image&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;rand_img&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; 
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt output_prompt"&gt;Out[3]:&lt;/div&gt;
+
+
+&lt;div class="output_jpeg output_subarea output_execute_result"&gt;
+&lt;img src="data:image/jpeg;base64,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
+"
+&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[4]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;img&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;skimage&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;io&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;imread&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rand_img&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;img&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;shape&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt output_prompt"&gt;Out[4]:&lt;/div&gt;
+
+
+&lt;div class="output_text output_subarea output_execute_result"&gt;
+&lt;pre&gt;(200, 200, 3)&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;We see that the image can be represented as a 3D matrix through two spatial dimensions (200 x 200) and then a third RGB dimension. We have to do a couple of preprocessing steps before feeding an image through the VGG16 model. The images must be resized to 224 x 224, the color channels must be normalized, and an extra dimension must be added due to Keras expecting to recieve multiple models. Thankfully, Keras has built-in functions to handle most of this.&lt;/p&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[5]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;img&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;kimage&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;load_img&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rand_img&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;target_size&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;224&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;224&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;kimage&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;img_to_array&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;img&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;expand_dims&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;axis&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;preprocess_input&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;shape&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+&lt;div class="output_subarea output_stream output_stdout output_text"&gt;
+&lt;pre&gt;(1, 224, 224, 3)
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;We can now load our model in and try feeding the image through.&lt;/p&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[6]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# image_top=False removes final connected layers&lt;/span&gt;
+&lt;span class="n"&gt;model&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;VGG16&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;include_top&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="kc"&gt;False&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;weights&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;imagenet&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[7]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;pred&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;model&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;predict&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pred&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;shape&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pred&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ravel&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;shape&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+&lt;div class="output_subarea output_stream output_stdout output_text"&gt;
+&lt;pre&gt;(1, 7, 7, 512)
+(25088,)
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;We will later have to flatten the output of the model into a long feature vector. One thing that should be noted is the time that it takes to run a single model though the NN on my 4-core machine:&lt;/p&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[8]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="o"&gt;%%&lt;/span&gt;&lt;span class="k"&gt;timeit&lt;/span&gt; -n5
+pred = model.predict(x)
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+&lt;div class="output_subarea output_stream output_stdout output_text"&gt;
+&lt;pre&gt;5 loops, best of 3: 905 ms per loop
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;This is pretty huge when you consider the fact that we will be processing 25,000 images! We'll now go through the above preprocessing steps for every model that we trained in the previous recommender blog posts. We can find these models by importing our "likes" data, filtering out low-interaction models and users (as before), and pick out the models that are leftover.&lt;/p&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[9]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;df&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;read_csv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;../data/model_likes_anon.psv&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                 &lt;span class="n"&gt;sep&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;|&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;quoting&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;csv&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;QUOTE_MINIMAL&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                 &lt;span class="n"&gt;quotechar&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\\&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;drop_duplicates&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;inplace&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="kc"&gt;True&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;df&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;helpers&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;threshold_interactions_df&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;uid&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;mid&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# model_ids to keep&lt;/span&gt;
+&lt;span class="n"&gt;valid_mids&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;set&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;mid&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;unique&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;h2 id="Feed-images-through-NN"&gt;Feed images through NN&lt;a class="anchor-link" href="#Feed-images-through-NN"&gt;&amp;#182;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;With our set of valid model IDs in hand, we can now run through the long process of loading in all of the image files, preprocessing them, and running them through the &lt;code&gt;VGG&lt;/code&gt; prediction. This takes a long time, and certain steps blowup memory. I've decided to batch things up below and include some print statements so that one can track progress. Beware: this takes a long time!&lt;/p&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[10]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# Grab relevant filenames&lt;/span&gt;
+&lt;span class="n"&gt;get_mid&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;lambda&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;split&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sep&lt;/span&gt;&lt;span class="p"&gt;)[&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;split&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;_&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;span class="n"&gt;fnames&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;glob&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;glob&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;../data/model_thumbs/*_thumb200.jpg&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;fnames&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;f&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;fnames&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;get_mid&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;valid_mids&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+
+&lt;span class="n"&gt;idx_to_mid&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+&lt;span class="n"&gt;batch_size&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;500&lt;/span&gt;
+&lt;span class="n"&gt;min_idx&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+&lt;span class="n"&gt;max_idx&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;min_idx&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;batch_size&lt;/span&gt;
+&lt;span class="n"&gt;total_max&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;fnames&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;n_dims&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;preds&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ravel&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;shape&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;span class="n"&gt;px&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;224&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Initialize predictions matrix&lt;/span&gt;
+&lt;span class="n"&gt;preds&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;sp&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lil_matrix&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;fnames&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;n_dims&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+
+&lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="n"&gt;min_idx&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="n"&gt;total_max&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;t0&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    
+    &lt;span class="n"&gt;X&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;zeros&lt;/span&gt;&lt;span class="p"&gt;(((&lt;/span&gt;&lt;span class="n"&gt;max_idx&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;min_idx&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;px&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;px&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+    
+    &lt;span class="c1"&gt;# For each file in batch, &lt;/span&gt;
+    &lt;span class="c1"&gt;# load as row into X&lt;/span&gt;
+    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;range&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;min_idx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;max_idx&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;fname&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;fnames&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="n"&gt;mid&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;get_mid&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;fname&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;idx_to_mid&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;mid&lt;/span&gt;
+        &lt;span class="n"&gt;img&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;image&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;load_img&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;fname&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;target_size&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;px&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;px&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+        &lt;span class="n"&gt;img_array&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;image&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;img_to_array&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;img&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;X&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;min_idx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;:,&lt;/span&gt; &lt;span class="p"&gt;:,&lt;/span&gt; &lt;span class="p"&gt;:]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;img_array&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;%&lt;/span&gt; &lt;span class="mi"&gt;200&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="n"&gt;t1&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+            &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s1"&gt;: &lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;t1&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;t0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+            &lt;span class="n"&gt;t0&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="n"&gt;max_idx&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;
+    &lt;span class="n"&gt;t1&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s1"&gt;: &lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;t1&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;t0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+    
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;Preprocess input&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;t0&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="n"&gt;X&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;preprocess_input&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;X&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;t1&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;t1&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;t0&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+    
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;Predicting&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;t0&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="n"&gt;these_preds&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;model&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;predict&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;X&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;shp&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;max_idx&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;min_idx&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;n_dims&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    
+    &lt;span class="c1"&gt;# Place predictions inside full preds matrix.&lt;/span&gt;
+    &lt;span class="n"&gt;preds&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;min_idx&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="n"&gt;max_idx&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;:]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;these_preds&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;reshape&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;shp&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;t1&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;t1&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;t0&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+    
+    &lt;span class="n"&gt;min_idx&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;max_idx&lt;/span&gt;
+    &lt;span class="n"&gt;max_idx&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;min&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;max_idx&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;batch_size&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;total_max&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;h2 id="Calculate-image-similarities"&gt;Calculate image similarities&lt;a class="anchor-link" href="#Calculate-image-similarities"&gt;&amp;#182;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;I would recommend writing the predictions to disk here (don't want the kernel to die and lose all that work!). The &lt;code&gt;preds&lt;/code&gt; matrix consists of a single row for each image with 25,088 sparse features as columns. To calculate item-item recommendations, we must convert this feature matrix into a similarity matrix.&lt;/p&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[11]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;cosine_similarity&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ratings&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;sim&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;ratings&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ratings&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;T&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="ow"&gt;not&lt;/span&gt; &lt;span class="nb"&gt;isinstance&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sim&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ndarray&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;sim&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;sim&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;toarray&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="n"&gt;norms&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;array&lt;/span&gt;&lt;span class="p"&gt;([&lt;/span&gt;&lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sqrt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;diagonal&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sim&lt;/span&gt;&lt;span class="p"&gt;))])&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sim&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;norms&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;norms&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;T&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[12]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;preds&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;preds&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;tocsr&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="n"&gt;sim&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;cosine_similarity&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;preds&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;h2 id="Recommend-models!"&gt;Recommend models!&lt;a class="anchor-link" href="#Recommend-models!"&gt;&amp;#182;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;Using the similarity matrix, we can reuse some old functions from previous posts to visualize some the recommendations. I've added on some HTML so that clicking on the images links out to their Sketchfab pages. Let's look at a couple!&lt;/p&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[13]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_thumbnails&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sim&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;idx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;idx_to_mid&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;row&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;sim&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;idx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;:]&lt;/span&gt;
+    &lt;span class="n"&gt;thumbs&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;
+    &lt;span class="n"&gt;mids&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;
+    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;argsort&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;row&lt;/span&gt;&lt;span class="p"&gt;)[:&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;]:&lt;/span&gt;
+        &lt;span class="n"&gt;response&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;requests&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;https://sketchfab.com/i/models/&lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;\
+                                &lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;idx_to_mid&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;]))&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;json&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="n"&gt;thumb&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;url&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;response&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;thumbnails&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;images&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+                 &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;width&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;200&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;height&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="mi"&gt;200&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="ow"&gt;not&lt;/span&gt; &lt;span class="n"&gt;thumb&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;no thumbnail&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="n"&gt;thumb&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;thumb&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="n"&gt;thumbs&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;thumb&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;mids&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;idx_to_mid&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;])&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;thumbs&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;mids&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;display_thumbs&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;thumbs&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;mids&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;thumb_html&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;&amp;lt;a href=&amp;#39;&lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s2"&gt;&amp;#39; target=&amp;#39;_blank&amp;#39;&amp;gt;&lt;/span&gt;&lt;span class="se"&gt;\&lt;/span&gt;
+&lt;span class="s2"&gt;                  &amp;lt;img style=&amp;#39;width: 160px; margin: 0px; &lt;/span&gt;&lt;span class="se"&gt;\&lt;/span&gt;
+&lt;span class="s2"&gt;                  float: left; border: 1px solid black; display:inline-block&amp;#39; &lt;/span&gt;&lt;span class="se"&gt;\&lt;/span&gt;
+&lt;span class="s2"&gt;                  src=&amp;#39;&lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s2"&gt;&amp;#39; /&amp;gt;&amp;lt;/a&amp;gt;&amp;quot;&lt;/span&gt;
+    &lt;span class="n"&gt;images&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;&amp;lt;div class=&amp;#39;line&amp;#39; style=&amp;#39;max-width: 640px; display: block;&amp;#39;&amp;gt;&amp;quot;&lt;/span&gt;
+
+    &lt;span class="n"&gt;display&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;HTML&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&amp;lt;font size=5&amp;gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;Input Model&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&amp;lt;/font&amp;gt;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+    &lt;span class="n"&gt;link&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;http://sketchfab.com/models/&lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;mids&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;])&lt;/span&gt;
+    &lt;span class="n"&gt;url&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;thumbs&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+    &lt;span class="n"&gt;display&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;HTML&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;thumb_html&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;link&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;)))&lt;/span&gt;
+    &lt;span class="n"&gt;display&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;HTML&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&amp;lt;font size=5&amp;gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;Similar Models&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&amp;lt;/font&amp;gt;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+
+    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;mid&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;zip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;thumbs&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="n"&gt;mids&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]):&lt;/span&gt;
+        &lt;span class="n"&gt;link&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;http://sketchfab.com/models/&lt;/span&gt;&lt;span class="si"&gt;{}&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;mid&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;images&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;thumb_html&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;link&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="n"&gt;images&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;&amp;lt;/div&amp;gt;&amp;#39;&lt;/span&gt;
+    &lt;span class="n"&gt;display&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;HTML&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;images&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[14]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;display_thumbs&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;get_thumbnails&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sim&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;100&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;idx_to_mid&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;9&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;font size=5&gt;Input Model&lt;/font&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;a href='http://sketchfab.com/models/b59f0fe68c564f3aba820039e9833854' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/b59f0fe68c564f3aba820039e9833854/dist/thumbnails/02b380d6eb414404871af10ef356b4f8/200x200.jpeg' /&gt;&lt;/a&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;font size=5&gt;Similar Models&lt;/font&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;div class='line' style='max-width: 640px; display: block;'&gt;&lt;a href='http://sketchfab.com/models/286af23feb8243aba81f1f39368ca61f' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/286af23feb8243aba81f1f39368ca61f/dist/thumbnails/a7be35c0635e476b90da01289722190b/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/55e32670071c4e349ecb15b98da7b885' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/55e32670071c4e349ecb15b98da7b885/dist/thumbnails/673ddcb403544e8d8ced58c1b51f6c2e/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/8b7e4a8a15974a8984d82e06ff062a31' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/8b7e4a8a15974a8984d82e06ff062a31/dist/thumbnails/ed4dac9cf5f349ca8d2c64dc8be2507b/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/fe108c417de44663a5973f3fc4601b9a' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/fe108c417de44663a5973f3fc4601b9a/dist/thumbnails/2f6e6191ecba456f82154cfe60f59c36/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/9abd3c9c846d40d28af4a10d717fd417' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/9abd3c9c846d40d28af4a10d717fd417/dist/thumbnails/448d961596ae46b49143736eeca1b8b4/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/a54f997b9cf84bb8be8c0651710caeef' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/a54f997b9cf84bb8be8c0651710caeef/dist/thumbnails/dd3a116d434443eabc96ee49d282db14/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/a6bdf1d11d714e07b9dd99dda02de965' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/a6bdf1d11d714e07b9dd99dda02de965/dist/thumbnails/78645e4ce2e84e3ea83a449cfc6d4f5d/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/87114216af9e428e85cb2bca375610ea' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/87114216af9e428e85cb2bca375610ea/dist/thumbnails/1c9411d691eb450a8a04c986b19620f6/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/7206ef1c43d34fc1928ae51cd45a8501' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/7206ef1c43d34fc1928ae51cd45a8501/dist/thumbnails/897d3ca25a8c4f0d91a0ef9f3f2845f4/200x200.jpeg' /&gt;&lt;/a&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[15]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;display_thumbs&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;get_thumbnails&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sim&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;idx_to_mid&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;9&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;font size=5&gt;Input Model&lt;/font&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;a href='http://sketchfab.com/models/f8b09235c2a64bf29afde51e91ce5c8c' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/f8b09235c2a64bf29afde51e91ce5c8c/dist/thumbnails/b9353780949a4b049c41ade41731dc23/200x200.jpeg' /&gt;&lt;/a&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;font size=5&gt;Similar Models&lt;/font&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;div class='line' style='max-width: 640px; display: block;'&gt;&lt;a href='http://sketchfab.com/models/8a43d807592947fe9ba2225fe9662b8f' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/8a43d807592947fe9ba2225fe9662b8f/dist/thumbnails/ea2460157b9b42eb94165af67523f210/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/6291037118b246c6a2013eccf1b1b626' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/6291037118b246c6a2013eccf1b1b626/dist/thumbnails/c2db30661c9d4235924544f2d4598675/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/f5c73f41698f4f168abbc8cf30aec2cc' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/f5c73f41698f4f168abbc8cf30aec2cc/dist/thumbnails/3841222c5fc94cb696008607dfa2455a/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/6b600e6aef014a0ab77ba9c9ee2887ca' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/6b600e6aef014a0ab77ba9c9ee2887ca/dist/thumbnails/ed6437d0803e4ef8a6ee13a2231dd155/200x200.jpg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/44e8e67d6ca84ff7ac5c851e0a44fae4' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/44e8e67d6ca84ff7ac5c851e0a44fae4/dist/thumbnails/92eb6227ff6c43daba8f52a83f8cb22e/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/503f871b71b7436ea16c8b73a5974555' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/503f871b71b7436ea16c8b73a5974555/dist/thumbnails/33a0d0123a864d99ba2ab5be498c800e/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/kxnw6yc07Zsu38jyVFYCqsaMvGn' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/kxnw6yc07Zsu38jyVFYCqsaMvGn/dist/thumbnails/3df5e6335e81479fa8c0b95d2054acfc/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/d977e2e4f37747b88f63de415036fa1e' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/d977e2e4f37747b88f63de415036fa1e/dist/thumbnails/47176467015146a1802b802e3b58827f/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/22f05d289cf044a09d6a50c7cac28dc0' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/22f05d289cf044a09d6a50c7cac28dc0/dist/thumbnails/889f66431e494cfab234e8d0e3e66e82/200x200.jpeg' /&gt;&lt;/a&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[16]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class=" highlight hl-ipython3"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;display_thumbs&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;get_thumbnails&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sim&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;1492&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;idx_to_mid&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;9&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;font size=5&gt;Input Model&lt;/font&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;a href='http://sketchfab.com/models/b9b32ca63ff84a33ae97fce2201cfe7b' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/b9b32ca63ff84a33ae97fce2201cfe7b/dist/thumbnails/a6009c47a1674c678d88ac156cd14d79/200x200.jpeg' /&gt;&lt;/a&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;font size=5&gt;Similar Models&lt;/font&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea "&gt;
+&lt;div class='line' style='max-width: 640px; display: block;'&gt;&lt;a href='http://sketchfab.com/models/82a1a8077d324508a81b1829c24f1c47' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/82a1a8077d324508a81b1829c24f1c47/dist/thumbnails/d5228dfba3394559850d0e82076870a5/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/f31a3eb88409404d90e5027fdf32e753' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/f31a3eb88409404d90e5027fdf32e753/dist/thumbnails/cc38c218327147dd81eba4dcb9357d67/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/faee89a8c0d646f99ed5f32962a8a2c8' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/faee89a8c0d646f99ed5f32962a8a2c8/dist/thumbnails/33c5c236beb84daf98885e5b2d2391ab/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/7c143c46845647a3a09859cf65c8730e' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/7c143c46845647a3a09859cf65c8730e/dist/thumbnails/3e16034ce6014718b20d3813f1b67d5c/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/3a686e566b27428b9f41c4657378e203' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/3a686e566b27428b9f41c4657378e203/dist/thumbnails/b556539f756a4a128a9c5ddba6550e0c/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/742d139255dd4fac94b894ee9ceda3a1' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/742d139255dd4fac94b894ee9ceda3a1/dist/thumbnails/35143c4587c5400e8fbe7f33e52afa5c/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/59401daa797e408e8538052766ce2ab1' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/59401daa797e408e8538052766ce2ab1/dist/thumbnails/a6bea8506a1745a3869b12e345f38715/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/d976a960ba8340668923daa5c2937727' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/d976a960ba8340668923daa5c2937727/dist/thumbnails/85cc76b679864c67aa9cadafa99f29f0/200x200.jpeg' /&gt;&lt;/a&gt;&lt;a href='http://sketchfab.com/models/279cb19a8a22407c8c94588314487872' target='_blank'&gt;                  &lt;img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black; display:inline-block'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/279cb19a8a22407c8c94588314487872/dist/thumbnails/9fda410c59a747008e41c2a046df542e/200x200.jpeg' /&gt;&lt;/a&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;h2 id="Conclusion"&gt;Conclusion&lt;a class="anchor-link" href="#Conclusion"&gt;&amp;#182;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;Wow! With this completely unsupervised method and zero hyperparameter tuning, we get strikingly well-matched images. This might feel somewhat frustrating - why did we spend all that time with those math-heavy, brain-stretching factorization algorithms when we could just feed everything through a deep learning model? Firstly, it may be difficult to perform user-to-item recommendations or the tag-recommendations from last post. Secondly, it seems that this visual similarity model and the implicit feedback models serve different purposes.&lt;/p&gt;
+&lt;p&gt;The NN does exactly what we expect - it finds similar images. The implicit feedback model finds other models that similar users have liked. What tends to happen is that the likes-based recommendations find models that share similar themes or appeal to certain clusters of users. For example, we may see that various anime characters get grouped together, or renderings of medieval armor and weapons. If we were to feed one of the medieval weapons into the NN, then we would find other examples of &lt;em&gt;only&lt;/em&gt; that exact weapon which likely span across many periods of time.&lt;/p&gt;
+&lt;p&gt;I did attempt to combine the LightFM model with this NN model by taking the NN output features and using them as side information in the LightFM model. There were typically ~2500 nonzero NN features for each model which totally blew up the training time of the LightFM model. It took 30 minutes to compute the precision at k. I shuttered at the idea of calculating learning curves and grid searches, so I gave up! Maybe someday I'll spin up a giant EC2 box and see what happens.&lt;/p&gt;
+&lt;p&gt;Next post, I wrap up this series by writing about how I built out a Flask app on AWS called Rec-a-Sketch to serve up interactive Sketchfab recommendations. Thanks for reading!&lt;/p&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;/p&gt;</summary></entry><entry><title>Learning to Rank Sketchfab Models with LightFM</title><link href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/" rel="alternate"></link><updated>2016-11-07T00:00:00-05:00</updated><author><name>Ethan Rosenthal</name></author><id>tag:blog.ethanrosenthal.com,2016-11-07:2016/11/07/implicit-mf-part-2/</id><summary type="html">&lt;p&gt;
 &lt;div class="cell border-box-sizing text_cell rendered"&gt;
 &lt;div class="prompt input_prompt"&gt;
 &lt;/div&gt;
