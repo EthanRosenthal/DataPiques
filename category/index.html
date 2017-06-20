@@ -34,7 +34,21 @@
         </div>
     </header>
     <div id="wrapper">
-        <div id="content">            <h4 class="date">Mar 20, 2017</h4>
+        <div id="content">            <h4 class="date">Jun 20, 2017</h4>
+
+            <article class="post">
+                <h2 class="title">
+                    <a href="http://blog.ethanrosenthal.com/2017/06/20/matrix-factorization-in-pytorch/" rel="bookmark" title="Permanent Link to &quot;Matrix Factorization in PyTorch&quot;">Matrix Factorization in PyTorch</a>
+                </h2>
+
+                
+<p>Hey, remember when I wrote those <a href="http://blog.ethanrosenthal.com/2016/01/09/explicit-matrix-factorization-sgd-als/">ungodly</a> <a href="http://blog.ethanrosenthal.com/2016/10/19/implicit-mf-part-1/">long</a> <a href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/">posts</a> about matrix factorization chock-full of gory math? Good news! You can forget it all. We have now entered the Era of Deep Learning, and automatic differentiation shall be our guiding light.</p>
+
+                <div class="clear"></div>
+
+                <div class="info">
+                </div>
+            </article>            <h4 class="date">Mar 20, 2017</h4>
 
             <article class="post">
                 <h2 class="title">
@@ -54,7 +68,6 @@
                 </h2>
 
                 
-
 <p>After the long <a href="http://blog.ethanrosenthal.com/2016/10/09/likes-out-guerilla-dataset/">series</a> <a href="http://blog.ethanrosenthal.com/2016/10/19/implicit-mf-part-1/">of</a> <a href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/">previous</a> <a href="http://blog.ethanrosenthal.com/2016/12/05/recasketch-keras/">posts</a> describing various recommendation algorithms using Sketchfab data, I decided to build a website called <a href="http://www.rec-a-sketch.science/">Rec-a-Sketch</a> which visualizes the different algorithms' recommendations. In this post, I'll describe the process of getting this website up and running on AWS with nginx and gunicorn.</p>
 
                 <div class="clear"></div>
@@ -69,7 +82,6 @@
                 </h2>
 
                 
-
 <p>To close out our series on building recommendation models using <a href="http://blog.ethanrosenthal.com/2016/10/09/likes-out-guerilla-dataset/">Sketchfab data</a>, I will venture far from the <a href="http://blog.ethanrosenthal.com/2016/10/19/implicit-mf-part-1/">previous</a> <a href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/">posts'</a> factorization-based methods and instead explore an unsupervised, deep learning-based model. You'll find that the implementation is fairly simple with remarkably promising results which is almost a smack in the face to all of that effort put in earlier.</p>
 
                 <div class="clear"></div>
@@ -84,7 +96,6 @@
                 </h2>
 
                 
-
 <p>In this post we're going to do a bunch of cool things following up on the last <a href="http://blog.ethanrosenthal.com/2016/10/19/implicit-mf-part-1/">post</a> introducing implicit matrix factorization. We're going to explore Learning to Rank, a different method for implicit matrix factorization, and then use the library <a href="http://lyst.github.io/lightfm/docs/home.html">LightFM</a> to incorporate side information into our recommender. Next, we'll use <a href="https://scikit-optimize.github.io/">scikit-optimize</a> to be smarter than grid search for cross validating hyperparameters. Lastly, we'll see that we can move beyond simple user-to-item and item-to-item recommendations now that we have side information embedded in the same space as our users and items. Let's go!</p>
 
                 <div class="clear"></div>
@@ -99,7 +110,6 @@
                 </h2>
 
                 
-
 <p>Last post I described how I collected implicit feedback data from the website <a href="https://sketchfab.com/">Sketchfab</a>. I then claimed I would write about how to actually build a recommendation system with this data. Well, here we are! Let's build.</p>
 
                 <div class="clear"></div>
@@ -114,9 +124,8 @@
                 </h2>
 
                 
-
 <p>-- <a href="https://www.youtube.com/watch?v=H0kJLW2EwMg">Zack de la Rocha</a></p>
-<p><em>tl;dr -&gt; I collected an implicit feedback dataset along with side-information about the items. This dataset contains around 62,000 users and 28,000 items. All the data lives <a href="https://github.com/EthanRosenthal/rec-a-sketch/tree/master/data">here</a> inside of <a href="https://github.com/EthanRosenthal/rec-a-sketch">this</a> repo. Enjoy!</em></p>
+<p><em>tl;dr -> I collected an implicit feedback dataset along with side-information about the items. This dataset contains around 62,000 users and 28,000 items. All the data lives <a href="https://github.com/EthanRosenthal/rec-a-sketch/tree/master/data">here</a> inside of <a href="https://github.com/EthanRosenthal/rec-a-sketch">this</a> repo. Enjoy!</em></p>
 
                 <div class="clear"></div>
 
@@ -130,7 +139,6 @@
                 </h2>
 
                 
-
 <p>Last <a href="http://blog.ethanrosenthal.com/2016/07/20/lets-talk-or/">post</a> I talked about how data scientists probably ought to spend some time talking about optimization (but not too much time - I need topics for my blog posts!). While I provided a basic optimization example in that post, that may have not been so interesting, and there definitely wasn't any machine learning involved.</p>
 
                 <div class="clear"></div>
@@ -145,7 +153,6 @@
                 </h2>
 
                 
-
 <p>You've studied machine learning, you're a dataframe master for massaging data, and you can easily pipe that data through a bunch of machine learning libraries.</p>
 
                 <div class="clear"></div>
@@ -160,23 +167,7 @@
                 </h2>
 
                 
-
 <p>In my last <a href="http://blog.ethanrosenthal.com/2015/11/02/intro-to-collaborative-filtering/">post</a>, I described user- and item-based collaborative filtering which are some of the simplest recommendation algorithms. For someone who is used to conventional machine learning classification and regression algorithms, collaborative filtering may have felt a bit <em>off</em>. To me, machine learning almost always deals with some function which we are trying to maximize or minimize. In simple linear regression, we minimize the mean squared distance between our predictions and the true values. Logistic regression involves maximizing a likelihood function. However, in my post on collaborative filtering, we randomly tried a bunch of different parameters (distance function, top-k cutoff) and watched what happened to the mean squared error. This sure doesn't feel like machine <em>learning</em>.</p>
-
-                <div class="clear"></div>
-
-                <div class="info">
-                </div>
-            </article>            <h4 class="date">Nov 02, 2015</h4>
-
-            <article class="post">
-                <h2 class="title">
-                    <a href="http://blog.ethanrosenthal.com/2015/11/02/intro-to-collaborative-filtering/" rel="bookmark" title="Permanent Link to &quot;Intro to Recommender Systems: Collaborative Filtering&quot;">Intro to Recommender Systems: Collaborative Filtering</a>
-                </h2>
-
-                
-
-<p>I've written before about how much I enjoyed Andrew Ng's Coursera Machine Learning course. However, I also mentioned that I thought the course to be lacking a bit in the area of recommender systems. After learning basic models for regression and classification, recommmender systems likely complete the triumvirate of machine learning pillars for data science.</p>
 
                 <div class="clear"></div>
 

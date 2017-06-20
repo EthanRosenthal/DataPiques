@@ -3,7 +3,7 @@
 <head>
         <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Data Piques | Rec-a-Sketch: a Flask App for Interactive Sketchfab Recommendations</title>
+    <title>Data Piques | Matrix Factorization in PyTorch</title>
     <link rel="shortcut icon" type="image/png" href="http://blog.ethanrosenthal.com/favicon.png">
     <link rel="shortcut icon" type="image/x-icon" href="http://blog.ethanrosenthal.com/favicon.ico">
     <link href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Full Atom Feed" />
@@ -33,11 +33,11 @@
         </div>
     </header>
     <div id="wrapper">
-        <div id="content">            <h4 class="date">Feb 05, 2017</h4>
+        <div id="content">            <h4 class="date">Jun 20, 2017</h4>
 
             <article class="post">
                 <h2 class="title">
-                    <a href="http://blog.ethanrosenthal.com/2017/02/05/rec-a-sketch/" rel="bookmark" title="Permanent Link to &quot;Rec-a-Sketch: a Flask App for Interactive Sketchfab Recommendations&quot;">Rec-a-Sketch: a Flask App for Interactive Sketchfab Recommendations</a>
+                    <a href="http://blog.ethanrosenthal.com/2017/06/20/matrix-factorization-in-pytorch/" rel="bookmark" title="Permanent Link to &quot;Matrix Factorization in PyTorch&quot;">Matrix Factorization in PyTorch</a>
                 </h2>
 
                 <style type="text/css">/*!
@@ -1017,48 +1017,76 @@ h6:hover .anchor-link {
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 
-<p>After the long <a href="http://blog.ethanrosenthal.com/2016/10/09/likes-out-guerilla-dataset/">series</a> <a href="http://blog.ethanrosenthal.com/2016/10/19/implicit-mf-part-1/">of</a> <a href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/">previous</a> <a href="http://blog.ethanrosenthal.com/2016/12/05/recasketch-keras/">posts</a> describing various recommendation algorithms using Sketchfab data, I decided to build a website called <a href="http://www.rec-a-sketch.science/">Rec-a-Sketch</a> which visualizes the different algorithms' recommendations. In this post, I'll describe the process of getting this website up and running on AWS with nginx and gunicorn.</p>
+<p>Hey, remember when I wrote those <a href="http://blog.ethanrosenthal.com/2016/01/09/explicit-matrix-factorization-sgd-als/">ungodly</a> <a href="http://blog.ethanrosenthal.com/2016/10/19/implicit-mf-part-1/">long</a> <a href="http://blog.ethanrosenthal.com/2016/11/07/implicit-mf-part-2/">posts</a> about matrix factorization chock-full of gory math? Good news! You can forget it all. We have now entered the Era of Deep Learning, and automatic differentiation shall be our guiding light.</p>
 
-<h2 id="Goal">Goal<a class="anchor-link" href="#Goal">¶</a></h2><p>The goal of the website was two-fold.</p>
-<ol>
-<li>I wanted to view the different algorithm's recommendations side-by-side for comparison.</li>
-<li>I wanted to get "lost" in the recommendations like one gets lost clicking from link to link on Wikipedia.</li>
-</ol>
-<p>I organized the page as follows so that (1) all recommendations were visible and (2) one can click on any of the recommended models to be taken to that model's recommendations.</p>
-<p><a href="/assets/img/rec_screenshot.png"><img alt="main page" src="http://blog.ethanrosenthal.com/assets/img/rec_screenshot.png"/></a></p>
-<h2 id="Organization-of-the-App">Organization of the App<a class="anchor-link" href="#Organization-of-the-App">¶</a></h2><p>I decided to use Flask to build the web app because I already have some experience with it, and I'm not trying to reinvent the wheel! The functionality itself is fairly simple. Other than an about page, there is only one page and one Flask <code>route</code> in the whole site.</p>
-<p>The functionality is relatively simple. When one initially goes to the page, there is a default list of models to select from, or one can input a link to a custom model. Once a model is selected, this sends a <code>GET</code> request to the main <code>route</code>. When the <code>route</code> receives this request, it must do two things:</p>
-<ol>
-<li>Grab data about the input model (name, url, and thumbnail).</li>
-<li>Find other recommended models and get their associated data. </li>
-</ol>
-<p>I populated a sqllite database with data about the Sketchfab models. I do not store the thumbnails directly; rather, I include a link to the thumbnail on Sketchfab's servers.</p>
-<p>For grabbing recommendations, I created a table with <em>precomputed</em> recommendations for each model. The recommendations are stored in the stupidest possible way as a string of comma-separated model ID's. I pull down the string, split on the commas, and place everything in a list. The code looks something like what follows.</p>
+<p>Less facetiously, <em>I</em> have finally spent some time checking out these new-fangled deep learning frameworks, and damn if I am not excited.</p>
+<p>In this post, I will show you how to use <a href="http://pytorch.org/">PyTorch</a> to bypass the mess of code from my old post on Explicit Matrix Factorization and instead implement a model that will converge faster in fewer lines of code.</p>
+<p>But first, let's take a trip down memory lane.</p>
+<h2 id="The-Dark-Ages">The Dark Ages<a class="anchor-link" href="#The-Dark-Ages">¶</a></h2><p>If you recall from the original matrix factorization post, the key to the derivation was calculus. We defined a loss function which was the mean squared error (MSE) loss between the matrix factorization "prediction" and the actual user-item ratings. In order to minimize the loss function, we of course took the derivative and set it equal to zero.</p>
+<p>For the Stochastic Gradient Descent (SGD) derivation, we iterated through each sample in our dataset and took the derivative of the loss function with respect to each free "variable" in our model, which were the user and item latent feature vectors. We then used that derivative to smartly update the values for the latent feature vectors as we surfed down the loss function in search of a minima.</p>
+<p>I just described what we did in two paragraphs, but it took much longer to actually derive the correct gradient updates and code the whole thing up. The worst part was that, if we wanted to change anything about our prediction model, such as adding regularization or a user bias term, then we had re-derive all of the gradient updates by hand. And if we wanted to play with new techniques, like dropout? Oof, that sounds like a pain to derive!</p>
+<h2 id="The-Enlightenment">The Enlightenment<a class="anchor-link" href="#The-Enlightenment">¶</a></h2><p>The beauty of modern deep learning frameworks is that they utilize automatic differentiation. The phrase means exactly what it sounds like. You simply define your model for prediction, your loss function, and your optimization technique (Vanilla SGD, Adagrad, ADAM, etc...), and the computer will automatically calculate the gradient updates and optimize your model.</p>
+<p>Additionally, your models can often be easily parallelized across multiple CPU's or turbo-boosted on GPU's with little effort compared to, say, writing Cython code and parallelizing by hand.</p>
+<h2 id="Minimum-Viable-Matrix-Factorization">Minimum Viable Matrix Factorization<a class="anchor-link" href="#Minimum-Viable-Matrix-Factorization">¶</a></h2><p>We'll walk through the three steps to building a prototype: defining the model, defining the loss, and picking an optimization technique. The latter two steps are largely built into PyTorch, so we'll start with the hardest first.</p>
+<h3 id="Model">Model<a class="anchor-link" href="#Model">¶</a></h3><p>All models in PyTorch subclass from <a href="http://pytorch.org/docs/nn.html#torch.nn.Module">torch.nn.Module</a>, and we will be no different. For our purposes, we only need to define our class and a <code>forward</code> method. The <code>forward</code> method will simply be our matrix factorization prediction which is the dot product between a user and item latent feature vector.</p>
+<p>In the language of neural networks, our user and item latent feature vectors are called <em>embedding</em> layers which are analogous to the typical two-dimensional matrices that make up the latent feature vectors. We'll define the embeddings when we initialize the class, and the <code>forward</code> method (the prediction) will involve picking out the correct rows of each of the embedding layers and then taking the dot product.</p>
+<p>Thankfully, many of the methods that you have come to know and love in numpy are also present in the PyTorch tensor library. When in doubt, I treat things like numpy and usually get 90% there.</p>
+<p>We'll also make up some fake ratings data for playing with in this post.</p>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In [ ]:</div>
+<div class="prompt input_prompt">In [1]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># mid is an inputted model ID</span>
-<span class="c1"># type is the recommendation algorithm type (e.g. learning-to-rank)</span>
-<span class="n">c</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
-<span class="n">sql</span> <span class="o">=</span> <span class="s2">"""</span>
-<span class="s2">    SELECT</span>
-<span class="s2">      type,</span>
-<span class="s2">      recommended</span>
-<span class="s2">    FROM recommendations</span>
-<span class="s2">    WHERE</span>
-<span class="s2">      mid = '</span><span class="si">{}</span><span class="s2">'</span>
-<span class="s2">"""</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span>
-<span class="n">c</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
-<span class="n">results</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
-<span class="n">recommendations</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-    <span class="n">recommendations</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">','</span><span class="p">)]))</span>
-<span class="n">recommendations</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">rand</span> <span class="k">as</span> <span class="n">sprand</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span>
+
+<span class="c1"># Make up some random explicit feedback ratings</span>
+<span class="c1"># and convert to a numpy array</span>
+<span class="n">n_users</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">n_items</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">ratings</span> <span class="o">=</span> <span class="n">sprand</span><span class="p">(</span><span class="n">n_users</span><span class="p">,</span> <span class="n">n_items</span><span class="p">,</span> 
+                 <span class="n">density</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">'csr'</span><span class="p">)</span>
+<span class="n">ratings</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> 
+                                  <span class="n">size</span><span class="o">=</span><span class="n">ratings</span><span class="o">.</span><span class="n">nnz</span><span class="p">)</span>
+                          <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+<span class="n">ratings</span> <span class="o">=</span> <span class="n">ratings</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [10]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">class</span> <span class="nc">MatrixFactorization</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_users</span><span class="p">,</span> <span class="n">n_items</span><span class="p">,</span> <span class="n">n_factors</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">user_factors</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_users</span><span class="p">,</span> 
+                                               <span class="n">n_factors</span><span class="p">,</span>
+                                               <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">item_factors</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_items</span><span class="p">,</span> 
+                                               <span class="n">n_factors</span><span class="p">,</span>
+                                               <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">user_factors</span><span class="p">(</span><span class="n">user</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">item_factors</span><span class="p">(</span><span class="n">item</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [11]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">MatrixFactorization</span><span class="p">(</span><span class="n">n_users</span><span class="p">,</span> <span class="n">n_items</span><span class="p">,</span> <span class="n">n_factors</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1068,8 +1096,18 @@ h6:hover .anchor-link {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>I should note that the above code is easily subject to <a href="https://en.wikipedia.org/wiki/SQL_injection">SQL Injection</a>. Please don't write code like this on a production server!</p>
-<p>The main <code>route</code> functionality was actually the easiest part of the whole project. The hardest parts were getting things running remotely.</p>
+<h3 id="Loss">Loss<a class="anchor-link" href="#Loss">¶</a></h3><p>While PyTorch allows you to define custom loss functions, they thankfully have a default mean squared error loss function in the library.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [12]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">loss_func</span> <span class="o">=</span> <span class="n">loss_func</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">MSELoss</span><span class="p">()</span>
+</pre></div>
+</div>
 </div>
 </div>
 </div>
@@ -1077,29 +1115,158 @@ h6:hover .anchor-link {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Deploying-to-AWS">Deploying to AWS<a class="anchor-link" href="#Deploying-to-AWS">¶</a></h2><p>This <a href="https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-gunicorn-and-nginx-on-ubuntu-14-04">post</a> from DigitalOcean was super helpful in getting things up and running. In fact, I almost followed that post verbatim.</p>
-<h3 id="EC2">EC2<a class="anchor-link" href="#EC2">¶</a></h3><p>For my purposes, I chose to use Amazon Web Services (AWS) instead of DigitalOcean for hosting the Rec-a-Sketch. This was imply because I had previous experience with AWS. The first step is to setup an EC2 instance which is virtual server. Rec-a-Sketch is lightweight, so I chose a t2.nano instance because it's the cheapest.</p>
-<p>One must create an Elastic IP address for the instance (which costs some money) as well as open ports 80 and 22. The ports can be opened by going to <code>Network & Security -> Security Groups</code> and creating a security group with the following ports:</p>
-<p><a href="/assets/img/security_groups.png"><img alt="main page" src="http://blog.ethanrosenthal.com/assets/img/security_groups.png"/></a></p>
-<p>When the EC2 instance is created, you can download a pem file which allows you to ssh into the EC2 box. Save the pem file to your computer, and set the permissions accordingly:</p>
-<pre><code>chmod 400 pemfile.pem</code></pre>
-<p>I usually place the file in <code>~/.ssh/</code> and then add the file to my <code>~/.ssh/config</code> file for easy ssh-ing later on. The <code>config</code> file lets you setup quick aliases for ssh-ing (see <a href="http://nerderati.com/2011/03/17/simplify-your-life-with-an-ssh-config-file/">here</a> for more details).</p>
-<h3 id="The-Stack">The Stack<a class="anchor-link" href="#The-Stack">¶</a></h3><p>Once you're able to ssh into the EC2 instance, it's time to setup the stack. The stack consists of the following:</p>
-<ol>
-<li>nginx | a web server which can handle incoming requests and redirect them to your Flask app.</li>
-<li>upstart | this makes sure that your Flask app stays up and running. If the app should die, upstart will start it back up again.</li>
-<li>gunicorn | a python WSGI HTTP server. I freely admit that I don't quite get the purpose of gunicorn. One clear benefit is that you can run multiple "workers" or copies of your Flask app which allows you to process multiple requests at once.</li>
-</ol>
-<p>The DigitalOcean posts walks through the setup of this stack quite nicely. Some modifications that I made are that I use <a href="https://conda.io/miniconda.html">miniconda</a> for managing the python libraries. In my upstart script, I have to make sure to add miniconda to the <code>PATH</code> environment variable. The upstart script is on github <a href="https://github.com/EthanRosenthal/rec-a-sketch/blob/master/flask_app/recasketch.conf">here</a>, and the nginx configuration is <a href="https://github.com/EthanRosenthal/rec-a-sketch/blob/master/flask_app/nginx.conf">here</a>.</p>
-<p>I did run into some issues setting up both the upstart service and nginx (when do things ever work the first time around?). Both services have log files which can be helpful for debugging. nginx had access and error logs in <code>/var/log/nginx/</code>, and each upstart service has its own log in <code>/var/log/upstart/</code>.</p>
-<h2 id="Image-Hosting">Image Hosting<a class="anchor-link" href="#Image-Hosting">¶</a></h2><p>I mentioned before that I do not actually host the Sketchfab model images on my server. I would have to pay for outgoing bandwidth, and this would add up quite fast (if people actually visit my website!). A simpler way to host images (though maybe morally dubious?) is to point to the url where Sketchfab hosts the image.</p>
-<p>The Sketchfab API easily lets you find the location of an image thumbnail. At first I would just ping the Sketchfab API for each request that came into my Flask app. This proved super slow because I would have to wait for the Sketchfab API response each time. I tried to solve this by running a big script to store all API responses in my own database.</p>
-<p>This worked for a bit, but then the image links started to break. I was confused for a bit, but maybe you can figure out what happened - here's an example image link:</p>
-<pre><code>https://dg5bepmjyhz9h.cloudfront.net/urls/a1194aa7be824b7da6accb1d0c788132
-/dist/thumbnails/93e331260a8142c6ab85d61f6a025476/200x200.jpeg</code></pre>
-<p>What's going on here? It turns out that Sketchfab smartly hosts their images using a Content Delivery Network, or CDN. CDNs are used to quickly serve files to users by hosting the files much closer to the user. There's no guarantee that the filename should stay the same at the CDN node, and it seems that they do not.</p>
-<p>I did not want to go back to pinging the Sketchfab API on every request, so I settled on a compromise. I setup a cron job to run every two days to grab the current image urls. The assumption here is that these urls will not change too quickly, and I am fine with small breakages in the meantime. The cron job script is located <a href="https://github.com/EthanRosenthal/rec-a-sketch/blob/master/flask_app/app/update.sh">here</a>.</p>
-<h2 id="Closing-Thoughts">Closing Thoughts<a class="anchor-link" href="#Closing-Thoughts">¶</a></h2><p>I had a lot of fun playing with the Sketchfab data and building Rec-a-Sketch. There a lot more algorithms that I would like to try out on the data, but I may like to venture into a different project for the time being. I would encourage you to try playing with the data and see what pops out. In the meantime, try getting "lost" in <a href="http://www.rec-a-sketch.science/">Rec-a-Sketch</a>!</p>
+<h3 id="Optimization">Optimization<a class="anchor-link" href="#Optimization">¶</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>There are a bunch of different optimization methods in PyTorch, but we'll stick with straight-up Stochastic Gradient Descent for today. One of the fun things about the library is that you are free to choose how to optimize each parameter of your model. Want to have different learning rates for different layers of your neural net? Go for it.</p>
+<p>We'll keep things simple, though, and use the same technique for all parameters in our model. This requires instantiating an optimization class and passing in the parameters which we want this object to optimize.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [13]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> 
+                            <span class="n">lr</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">)</span> <span class="c1"># learning rate</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Train">Train<a class="anchor-link" href="#Train">¶</a></h3><p>With the three steps complete, all that's left is to train the model! We have to convert our data into a <code>Variable</code> which will talk with the automatic differentiation library, <a href="http://pytorch.org/docs/autograd.html">autograd</a>. To convert the data into a <code>Variable</code>, it must first be cast to a torch <code>Tensor</code>. Explicitly casting variables is relatively rare in Python, which is probably why I run into the most issues at this stage.</p>
+<p>You must get your data into Python-native datatypes, <code>float</code> and <code>long</code>, and numpy likes to make this difficult. For example, you can try to cast a numpy array to <code>long</code> by calling <code>arr.long()</code>. This is a valid method but does not seem to actually cast the matrix.</p>
+<p>Nonetheless, below we shuffle our data and iterate through each sample. Each sample is converted to <code>Variable</code>, the loss is calculated, backpropagation is carried out to generate the gradients, and then the optimizer updates the parameters. And voilá! We have matrix factorization.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [14]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Sort our data</span>
+<span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">ratings</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">))</span>
+<span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="n">p</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+
+<span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">)):</span>
+    <span class="c1"># Turn data into variables</span>
+    <span class="n">rating</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">([</span><span class="n">ratings</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]]))</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">LongTensor</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">long</span><span class="p">(</span><span class="n">row</span><span class="p">)]))</span>
+    <span class="n">col</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">LongTensor</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">long</span><span class="p">(</span><span class="n">col</span><span class="p">)]))</span>
+    
+    <span class="c1"># Predict and calculate loss</span>
+    <span class="n">prediction</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_func</span><span class="p">(</span><span class="n">prediction</span><span class="p">,</span> <span class="n">rating</span><span class="p">)</span>
+    
+    <span class="c1"># Backpropagate</span>
+    <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+    
+    <span class="c1"># Update the parameters</span>
+    <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Experimentation">Experimentation<a class="anchor-link" href="#Experimentation">¶</a></h2><p>The beauty of the above code is that we can rapidly experiment with different parts of our model and training. For example, adding user and item biases is quite simple via an embedding layer with one dimension:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [20]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">class</span> <span class="nc">BiasedMatrixFactorization</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_users</span><span class="p">,</span> <span class="n">n_items</span><span class="p">,</span> <span class="n">n_factors</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">user_factors</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_users</span><span class="p">,</span> 
+                                               <span class="n">n_factors</span><span class="p">,</span>
+                                               <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">item_factors</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_items</span><span class="p">,</span> 
+                                               <span class="n">n_factors</span><span class="p">,</span>
+                                               <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">user_biases</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_users</span><span class="p">,</span> 
+                                              <span class="mi">1</span><span class="p">,</span>
+                                              <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">item_biases</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_items</span><span class="p">,</span>
+                                              <span class="mi">1</span><span class="p">,</span>
+                                              <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+        <span class="n">pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_biases</span><span class="p">(</span><span class="n">user</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">item_biases</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="n">pred</span> <span class="o">+=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">user_factors</span><span class="p">(</span><span class="n">user</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">item_factors</span><span class="p">(</span><span class="n">item</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pred</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>$L_{2}$ regularization can easily be added to the entire model via the optimizer:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [21]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">reg_loss_func</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+                                <span class="n">weight_decay</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>And if you want to get smart about decaying your learning rate, try out a different optimization algorithm:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [22]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">adagrad_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adagrad</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>But that's all just the tip of the iceberg. The real fun is when we stop thinking of recommendation systems as simply user-by-item matrices and incorporate all sorts of side information, context, temporal data, etc... and pass this all through novel network topologies without having to calculate everything by hand. Let me know if you do any of that :)</p>
+<h2 id="Caveat">Caveat<a class="anchor-link" href="#Caveat">¶</a></h2><p>To now throw a little water on this optimistic post, it's worth pointing out that there are some costs to abandoning bespoke recommendation systems in favor of repurposing deep learning frameworks. For one, <em>well-written</em> custom solutions are still much faster. Alternating Least Squares is an elegant and more efficient method than SGD for factorizing matrices, and packages like <a href="https://github.com/benfred/implicit">implicit</a> show this off with their blazingly fast speed.</p>
+<p>Support for sparse feature learning is still a bit spotty, too. For example, <a href="https://github.com/lyst/lightfm">LightFM</a> is built from the ground up with sparse features in mind and consequently operates much quicker than a similar solution in a deep learning framework.</p>
+<p>This post may (read: will) eventually date itself. As GPUs get larger and the frameworks support more sparse operations on the GPU, it may make sense to fully switch over to deep learning frameworks from bespoke CPU solutions.</p>
+<h2 id="Further-Exploration">Further Exploration<a class="anchor-link" href="#Further-Exploration">¶</a></h2><p>This post is just a brief introduction to implementing a recommendation system in PyTorch. There are many parts of the code that are poorly optimized. In particular, it is quite helpful to have a generator function/class for loading the data when training. Additionally, one can push computation to a GPU or train in parallel in a <a href="http://pytorch.org/docs/notes/multiprocessing.html">HOGWILD</a> manner.</p>
+<p>If you would like to see more, I have started to play around with some explicit and implicit feedback recommendation models Pytorch in a repo <a href="https://github.com/ethanrosenthal/torchmf">here</a>. Maciej Kula, the author of LightFM, also has a repo with recommendation models in Pytorch <a href="https://github.com/maciejkula/netrex">here</a>.</p>
+<p>Lastly, why PyTorch for this post? I don't have a great reason other than that I have <em>really</em> enjoyed its general ease of use: it's super easy to install (even with GPU support), it integrates nicely with numpy, and the documentation is fairly extensive. It also feels like there is less noise out there when I am googling for help compared to more popular frameworks like Tensorflow. The downside is the library is a bit rough around the edges, and the API is rapidly chaging.</p>
 </div>
 </div>
 </div>
@@ -1135,7 +1302,7 @@ h6:hover .anchor-link {
                 <div class="clear"></div>
 
                 <div class="info">
-                    <a href="http://blog.ethanrosenthal.com/2017/02/05/rec-a-sketch/">posted on Feb 05, 2017</a>
+                    <a href="http://blog.ethanrosenthal.com/2017/06/20/matrix-factorization-in-pytorch/">posted on Jun 20, 2017</a>
                 </div>
             </article><style type="text/css">
 {

@@ -1017,9 +1017,7 @@ h6:hover .anchor-link {
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 
-
 <p>Last post I described how I collected implicit feedback data from the website <a href="https://sketchfab.com/">Sketchfab</a>. I then claimed I would write about how to actually build a recommendation system with this data. Well, here we are! Let's build.</p>
-
 
 <p>I think the best place to start when looking into implicit feedback recommenders is with the model outlined in the classic paper "<a href="http://yifanhu.net/PUB/cf.pdf">Collaborative Filtering for Implicit Feedback Datasets</a>" by Koren et.al. (warning: pdf link).  I have seen many names in the literature and machine learning libraries for this model. I'll call it Weighted Regularized Matrix Factorization (WRMF) which tends to be a name used fairly often. WRMF is like the classic rock of implicit matrix factorization. It may not be the trendiest, but it will never go out of style. And, everytime I use it, I know that I'm guaranteed to like what I get out. Specifically, this model makes reasonable intuitive sense, it's scalable, and, most importantly, I've found it easy to tune. There are much fewer hyperparameters than, say, stochastic gradient descent models.</p>
 <p>If you recall from my post on <a href="http://blog.ethanrosenthal.com/2016/01/09/explicit-matrix-factorization-sgd-als/">Explicit Feedback Matrix Factorization</a>, we had a loss function (without biases) that looked like:</p>
@@ -1028,22 +1026,21 @@ $$L_{WRMF} = \sum\limits_{u,i}c_{ui} \big( p_{ui} - \textbf{x}_{u}^{\intercal} \
 <p>The other new term in the loss function is $c_{ui}$. We call this the confidence matrix, and it roughly describes how confident we are that user $u$ does in fact have preference $p_{ui}$ for item $i$. In the paper, one of the confidence formulas that the authors consider is linear in the number of interactions. If we take $d_{ui}$ to be the number of times a user has clicked on an item on a website, then</p>
 $$c_{ui} = 1 + \alpha d_{ui}$$<p>where $\alpha$ is some hyperparameter determined by cross validation. In the case of the Sketchfab data, we only have binary "likes", so $d_{ui} \in \{0, 1\}$</p>
 <p>To take a step back, WRMF does not make the assumption that a user who has not interacted with an item does not <em>like</em> the item. WRMF <em>does</em> assume that that user has a negative preference towards that item, but we can choose how confident we are in that assumption through the confidence hyperparameter.</p>
-<p>Now, I could go through the whole derivation in gory latex of how to optimize this algorithm &aacute; la my previous explicit MF post, but other people have already done this many times over. Here's a great StackOverflow <a href="http://math.stackexchange.com/a/1073170">answer</a>, or, if you like your derivations in Dirac notation, then checkout Sudeep Das' <a href="http://datamusing.info/blog/2015/01/07/implicit-feedback-and-collaborative-filtering/">post</a>.</p>
-<h2 id="WRMF-Libraries">WRMF Libraries<a class="anchor-link" href="#WRMF-Libraries">&#182;</a></h2><p>There are a number of places to find open source code which implements WRMF. The most popular method of optimizing the loss function is through Alternating Least Squares. This tends be less tricky to tune than stochastic gradient descent, and the model is <a href="https://en.wikipedia.org/wiki/Embarrassingly_parallel">embarrassingly parallel</a>.</p>
+<p>Now, I could go through the whole derivation in gory latex of how to optimize this algorithm á la my previous explicit MF post, but other people have already done this many times over. Here's a great StackOverflow <a href="http://math.stackexchange.com/a/1073170">answer</a>, or, if you like your derivations in Dirac notation, then checkout Sudeep Das' <a href="http://datamusing.info/blog/2015/01/07/implicit-feedback-and-collaborative-filtering/">post</a>.</p>
+<h2 id="WRMF-Libraries">WRMF Libraries<a class="anchor-link" href="#WRMF-Libraries">¶</a></h2><p>There are a number of places to find open source code which implements WRMF. The most popular method of optimizing the loss function is through Alternating Least Squares. This tends be less tricky to tune than stochastic gradient descent, and the model is <a href="https://en.wikipedia.org/wiki/Embarrassingly_parallel">embarrassingly parallel</a>.</p>
 <p>The first code I saw for this algorithm was from Chris Johnson's <a href="https://github.com/MrChrisJohnson/implicit-mf">repo</a>. This code is in python, nicely makes use of sparse matrices, and generally gets the job done. Thierry Bertin-Mahieux then took this code and <a href="https://github.com/tbertinmahieux/implicit-mf">parallelized it</a> using the python multiprocessing library. This provides a decent speedup with no loss in accuracy.</p>
 <p>The people at Quora came out with a library called <a href="https://github.com/quora/qmf">qmf</a> which is parellized and written in C++. I haven't used it, but it is presumably faster than the multiprocessing python version. Lastly, Ben Frederickson went and wrote parallelized code in pure Cython <a href="https://github.com/benfred/implicit">here</a>. This blows the other python versions out of the water in terms of performance and is somehow <a href="https://github.com/benfred/implicit/blob/master/examples/benchmark.py">faster</a> than qmf (which seems odd).</p>
 <p>Anywho, I ended up using Ben's library for this post because (1) I could stay in python, and (2) it's super fast. I forked the library and wrote a small class to wrap the algorithm to make it easy to run grid searches and calculate learning curves. Feel free to check out my fork <a href="https://github.com/EthanRosenthal/implicit">here</a>, though I didn't write any tests so use at your own risk :)</p>
-<h2 id="Massaging-the-data">Massaging the data<a class="anchor-link" href="#Massaging-the-data">&#182;</a></h2><p>Now that that's out of the way, let's train a WRMF model so we can finally recommend some Sketchfab models!</p>
+<h2 id="Massaging-the-data">Massaging the data<a class="anchor-link" href="#Massaging-the-data">¶</a></h2><p>Now that that's out of the way, let's train a WRMF model so we can finally recommend some Sketchfab models!</p>
 <p>The first step is to load the data and transform it into an interactions matrix of size "number of users" by "number of items". The data is currently stored as a csv with each row denoting a model that a user has "liked" on the Sketchfab website. The first column is the name of the model, the second column is the unique model ID (<code>mid</code>), and the third column is the anonymized user ID (<code>uid</code>).</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="prompt input_prompt">In [1]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
@@ -1054,222 +1051,182 @@ $$c_{ui} = 1 + \alpha d_{ui}$$<p>where $\alpha$ is some hyperparameter determine
 <span class="kn">import</span> <span class="nn">implicit</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">import</span> <span class="nn">copy</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;ggplot&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">'ggplot'</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="prompt input_prompt">In [2]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/model_likes_anon.psv&#39;</span><span class="p">,</span>
-                 <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;|&#39;</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
-                 <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">'../data/model_likes_anon.psv'</span><span class="p">,</span>
+                 <span class="n">sep</span><span class="o">=</span><span class="s1">'|'</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
+                 <span class="n">quotechar</span><span class="o">=</span><span class="s1">'</span><span class="se">\\</span><span class="s1">'</span><span class="p">)</span>
 <span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt output_prompt">Out[2]:</div>
-
-
-
 <div class="output_html rendered_html output_subarea output_execute_result">
 <div>
 <table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>modelname</th>
-      <th>mid</th>
-      <th>uid</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>7ac1b40648fff523d7220a5d07b04d9b</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>2b4ad286afe3369d39f1bb7aa2528bc7</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>1bf0993ebab175a896ac8003bed91b4b</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>6484211de8b9a023a7d9ab1641d22e7c</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>1109ee298494fbd192e27878432c718a</td>
-    </tr>
-  </tbody>
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>modelname</th>
+<th>mid</th>
+<th>uid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>7ac1b40648fff523d7220a5d07b04d9b</td>
+</tr>
+<tr>
+<th>1</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>2b4ad286afe3369d39f1bb7aa2528bc7</td>
+</tr>
+<tr>
+<th>2</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>1bf0993ebab175a896ac8003bed91b4b</td>
+</tr>
+<tr>
+<th>3</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>6484211de8b9a023a7d9ab1641d22e7c</td>
+</tr>
+<tr>
+<th>4</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>1109ee298494fbd192e27878432c718a</td>
+</tr>
+</tbody>
 </table>
 </div>
 </div>
-
-</div>
-
 </div>
 </div>
-
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="prompt input_prompt">In [3]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Duplicated rows: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;That</span><span class="se">\&#39;</span><span class="s1">s weird - let</span><span class="se">\&#39;</span><span class="s1">s just drop them&#39;</span><span class="p">)</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">'Duplicated rows: '</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'That</span><span class="se">\'</span><span class="s1">s weird - let</span><span class="se">\'</span><span class="s1">s just drop them'</span><span class="p">)</span>
 <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Duplicated rows 155
-That&#39;s weird - let&#39;s just drop them
+That's weird - let's just drop them
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="prompt input_prompt">In [4]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;uid&#39;</span><span class="p">,</span> <span class="s1">&#39;mid&#39;</span><span class="p">]]</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s1">'uid'</span><span class="p">,</span> <span class="s1">'mid'</span><span class="p">]]</span>
 <span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt output_prompt">Out[4]:</div>
-
-
-
 <div class="output_html rendered_html output_subarea output_execute_result">
 <div>
 <table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>uid</th>
-      <th>mid</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>7ac1b40648fff523d7220a5d07b04d9b</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>2b4ad286afe3369d39f1bb7aa2528bc7</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>1bf0993ebab175a896ac8003bed91b4b</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>6484211de8b9a023a7d9ab1641d22e7c</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>1109ee298494fbd192e27878432c718a</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-    </tr>
-  </tbody>
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>uid</th>
+<th>mid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>7ac1b40648fff523d7220a5d07b04d9b</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+</tr>
+<tr>
+<th>1</th>
+<td>2b4ad286afe3369d39f1bb7aa2528bc7</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+</tr>
+<tr>
+<th>2</th>
+<td>1bf0993ebab175a896ac8003bed91b4b</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+</tr>
+<tr>
+<th>3</th>
+<td>6484211de8b9a023a7d9ab1641d22e7c</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+</tr>
+<tr>
+<th>4</th>
+<td>1109ee298494fbd192e27878432c718a</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+</tr>
+</tbody>
 </table>
 </div>
 </div>
-
-</div>
-
 </div>
 </div>
-
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="prompt input_prompt">In [5]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">n_users</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">n_items</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of users: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_users</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of models: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_items</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Sparsity: </span><span class="si">{:4.3f}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_users</span><span class="o">*</span><span class="n">n_items</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Number of users: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_users</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Number of models: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_items</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Sparsity: </span><span class="si">{:4.3f}</span><span class="s1">%'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_users</span><span class="o">*</span><span class="n">n_items</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Number of users: 62583
 Number of models: 28806
@@ -1277,84 +1234,72 @@ Sparsity: 0.035%
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>While implicit recommendations excel where data is sparse, it can often be helpful to make the interactions matrix a little more dense. We limited our data collection to models that had at least 5 likes. However, it may not be the case that every user has liked at least 5 models. Let's go ahead and knock out users that liked fewer than 5 models. This could possibly mean that some models end up with fewer than 5 likes once these users are knocked out, so we will have to alternate back and forth knocking users and models out until things stabilize.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="prompt input_prompt">In [6]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">threshold_likes</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">uid_min</span><span class="p">,</span> <span class="n">mid_min</span><span class="p">):</span>
     <span class="n">n_users</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">n_items</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">sparsity</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_users</span><span class="o">*</span><span class="n">n_items</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Starting likes info&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of users: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_users</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of models: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_items</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Sparsity: </span><span class="si">{:4.3f}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sparsity</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Starting likes info'</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Number of users: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_users</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Number of models: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_items</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Sparsity: </span><span class="si">{:4.3f}</span><span class="s1">%'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sparsity</span><span class="p">))</span>
     
     <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
         <span class="n">starting_shape</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">mid_counts</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;uid&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="o">~</span><span class="n">df</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">mid_counts</span><span class="p">[</span><span class="n">mid_counts</span> <span class="o">&lt;</span> <span class="n">mid_min</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">())]</span>
-        <span class="n">uid_counts</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;mid&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="o">~</span><span class="n">df</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">uid_counts</span><span class="p">[</span><span class="n">uid_counts</span> <span class="o">&lt;</span> <span class="n">uid_min</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">())]</span>
+        <span class="n">mid_counts</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'uid'</span><span class="p">)</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="o">~</span><span class="n">df</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">mid_counts</span><span class="p">[</span><span class="n">mid_counts</span> <span class="o"><</span> <span class="n">mid_min</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">())]</span>
+        <span class="n">uid_counts</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'mid'</span><span class="p">)</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="o">~</span><span class="n">df</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">uid_counts</span><span class="p">[</span><span class="n">uid_counts</span> <span class="o"><</span> <span class="n">uid_min</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">())]</span>
         <span class="n">ending_shape</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">starting_shape</span> <span class="o">==</span> <span class="n">ending_shape</span><span class="p">:</span>
             <span class="n">done</span> <span class="o">=</span> <span class="kc">True</span>
     
-    <span class="k">assert</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;uid&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">mid_min</span><span class="p">)</span>
-    <span class="k">assert</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;mid&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">uid_min</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'uid'</span><span class="p">)</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">>=</span> <span class="n">mid_min</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'mid'</span><span class="p">)</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">>=</span> <span class="n">uid_min</span><span class="p">)</span>
     
     <span class="n">n_users</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">n_items</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">sparsity</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_users</span><span class="o">*</span><span class="n">n_items</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Ending likes info&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of users: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_users</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of models: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_items</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Sparsity: </span><span class="si">{:4.3f}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sparsity</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Ending likes info'</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Number of users: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_users</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Number of models: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_items</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Sparsity: </span><span class="si">{:4.3f}</span><span class="s1">%'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sparsity</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">df</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="prompt input_prompt">In [7]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_lim</span> <span class="o">=</span> <span class="n">threshold_likes</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Starting likes info
 Number of users: 62583
@@ -1367,25 +1312,22 @@ Sparsity: 0.140%
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Nice, we're above 0.1% which should be suitable for making decent recommendations. We now need to map each <code>uid</code> and <code>mid</code> to a row and column, respectively, for our interactions, or "likes" matrix. This can be done simply with Python dictionaries</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="prompt input_prompt">In [8]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Create mappings</span>
 <span class="n">mid_to_idx</span> <span class="o">=</span> <span class="p">{}</span>
 <span class="n">idx_to_mid</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1399,67 +1341,59 @@ Sparsity: 0.140%
     <span class="n">uid_to_idx</span><span class="p">[</span><span class="n">uid</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx</span>
     <span class="n">idx_to_uid</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">uid</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>The last step is to actually build the matrix. We will use sparse matrices so as not to take up too much memory. Sparse matrices are tricky because they come in many forms, and there are giant performance tradeoffs between them. Below is a super slow way to build a likes matrix. I tried running <code>%%timeit</code> but got bored waiting for it to finish.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[9]:</div>
+<div class="prompt input_prompt">In [9]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># # Don&#39;t do this!</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># # Don't do this!</span>
 <span class="c1"># num_users = df_lim.uid.unique().shape[0]</span>
 <span class="c1"># num_items = df_lim.mid.unique().shape[0]</span>
 <span class="c1"># likes = sparse.csr_matrix((num_users, num_items), dtype=np.float64)</span>
 <span class="c1"># for row in df_lim.itertuples():</span>
 <span class="c1">#     likes[uid_to_idx[uid], mid_to_idx[row.mid]] = 1.0</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Alternatively, the below is pretty damn fast considering we're building a matrix of half a million likes.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="prompt input_prompt">In [10]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">map_ids</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">mapper</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">mapper</span><span class="p">[</span><span class="n">row</span><span class="p">]</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[11]:</div>
+<div class="prompt input_prompt">In [11]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="o">%%</span><span class="k">timeit</span>
 I = df_lim.uid.apply(map_ids, args=[uid_to_idx]).as_matrix()
 J = df_lim.mid.apply(map_ids, args=[mid_to_idx]).as_matrix()
@@ -1467,63 +1401,51 @@ V = np.ones(I.shape[0])
 likes = sparse.coo_matrix((V, (I, J)), dtype=np.float64)
 likes = likes.tocsr()
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>1 loop, best of 3: 876 ms per loop
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[12]:</div>
+<div class="prompt input_prompt">In [12]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">I</span> <span class="o">=</span> <span class="n">df_lim</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">map_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">uid_to_idx</span><span class="p">])</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span>
 <span class="n">J</span> <span class="o">=</span> <span class="n">df_lim</span><span class="o">.</span><span class="n">mid</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">map_ids</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">mid_to_idx</span><span class="p">])</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span>
 <span class="n">V</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">I</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 <span class="n">likes</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">coo_matrix</span><span class="p">((</span><span class="n">V</span><span class="p">,</span> <span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="n">J</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 <span class="n">likes</span> <span class="o">=</span> <span class="n">likes</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Cross-validation:-Splitsville">Cross-validation: Splitsville<a class="anchor-link" href="#Cross-validation:-Splitsville">&#182;</a></h2><p>Okay, we got a likes matrix and need to split it into training and test matrices. I do this a bit trickily (which is maybe a word?). I would like to track precision@k as my optimization metric later. A k of 5 would be nice. However, if I move 5 items from training to test for some of the users, then they may not have any data left in the training set (remember they had a minimum 5 likes). Thus, the train_test_split only looks for people who have at least 2*k (10 in this case) likes before moving some of their data to the test set. This obviously biases our cross-validation towards users with more likes. So it goes.</p>
-
+<h2 id="Cross-validation:-Splitsville">Cross-validation: Splitsville<a class="anchor-link" href="#Cross-validation:-Splitsville">¶</a></h2><p>Okay, we got a likes matrix and need to split it into training and test matrices. I do this a bit trickily (which is maybe a word?). I would like to track precision@k as my optimization metric later. A k of 5 would be nice. However, if I move 5 items from training to test for some of the users, then they may not have any data left in the training set (remember they had a minimum 5 likes). Thus, the train_test_split only looks for people who have at least 2*k (10 in this case) likes before moving some of their data to the test set. This obviously biases our cross-validation towards users with more likes. So it goes.</p>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[13]:</div>
+<div class="prompt input_prompt">In [13]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">train_test_split</span><span class="p">(</span><span class="n">ratings</span><span class="p">,</span> <span class="n">split_count</span><span class="p">,</span> <span class="n">fraction</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">"""</span>
 <span class="sd">    Split recommendation data into train and test sets</span>
 <span class="sd">    </span>
 <span class="sd">    Params</span>
@@ -1537,7 +1459,7 @@ likes = likes.tocsr()
 <span class="sd">        Fraction of users to split off some of their</span>
 <span class="sd">        interactions into test set. If None, then all </span>
 <span class="sd">        users are considered.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Note: likely not the fastest way to do things below.</span>
     <span class="n">train</span> <span class="o">=</span> <span class="n">ratings</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">tocoo</span><span class="p">()</span>
     <span class="n">test</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">lil_matrix</span><span class="p">(</span><span class="n">train</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
@@ -1545,13 +1467,13 @@ likes = likes.tocsr()
     <span class="k">if</span> <span class="n">fraction</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">user_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">train</span><span class="o">.</span><span class="n">row</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">split_count</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> 
+                <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">train</span><span class="o">.</span><span class="n">row</span><span class="p">)</span> <span class="o">>=</span> <span class="n">split_count</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> 
                 <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                 <span class="n">size</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">fraction</span> <span class="o">*</span> <span class="n">train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
             <span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
         <span class="k">except</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">((</span><span class="s1">&#39;Not enough users with &gt; </span><span class="si">{}</span><span class="s1"> &#39;</span>
-                  <span class="s1">&#39;interactions for fraction of </span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">)</span>\
+            <span class="nb">print</span><span class="p">((</span><span class="s1">'Not enough users with > </span><span class="si">{}</span><span class="s1"> '</span>
+                  <span class="s1">'interactions for fraction of </span><span class="si">{}</span><span class="s1">'</span><span class="p">)</span>\
                   <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">k</span><span class="p">,</span> <span class="n">fraction</span><span class="p">))</span>
             <span class="k">raise</span>
     <span class="k">else</span><span class="p">:</span>
@@ -1572,30 +1494,26 @@ likes = likes.tocsr()
     <span class="k">assert</span><span class="p">(</span><span class="n">train</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">test</span><span class="p">)</span><span class="o">.</span><span class="n">nnz</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">train</span><span class="o">.</span><span class="n">tocsr</span><span class="p">(),</span> <span class="n">test</span><span class="o">.</span><span class="n">tocsr</span><span class="p">(),</span> <span class="n">user_index</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="prompt input_prompt">In [14]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">user_index</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">likes</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">fraction</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Cross-validation:-Grid-search">Cross-validation: Grid search<a class="anchor-link" href="#Cross-validation:-Grid-search">&#182;</a></h2><p>Now that the data is split into training and test matrices, let's run a giant grid search to optimize our hyperparameters. We have four parameters that we would like to optimize:</p>
+<h2 id="Cross-validation:-Grid-search">Cross-validation: Grid search<a class="anchor-link" href="#Cross-validation:-Grid-search">¶</a></h2><p>Now that the data is split into training and test matrices, let's run a giant grid search to optimize our hyperparameters. We have four parameters that we would like to optimize:</p>
 <ol>
 <li><code>num_factors</code>: The number of latent factors, or degree of dimensionality in our model.</li>
 <li><code>regularization</code>: Scale of regularization for both user and item factors.</li>
@@ -1603,15 +1521,14 @@ likes = likes.tocsr()
 <li><code>iterations</code>: Number of iterations to run Alternating Least Squares optimization.</li>
 </ol>
 <p>I am going to track mean squared error (MSE) and precision at k (p@k), but I mainly care about the later. I've written some functions below to help with metric calculations and making the training log printout look nice. I am going to calculate a bunch of learning curves (that is, evaluate performance metrics at various stages of the training process) for a bunch of different hyperparameter combinations. Props to scikit-learn for being open source and letting me basically crib their GridSearchCV code.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="prompt input_prompt">In [15]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="k">import</span> <span class="n">mean_squared_error</span>
 <span class="k">def</span> <span class="nf">calculate_mse</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">ratings</span><span class="p">,</span> <span class="n">user_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="n">preds</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_for_customers</span><span class="p">()</span>
@@ -1622,17 +1539,15 @@ likes = likes.tocsr()
     <span class="k">return</span> <span class="n">mean_squared_error</span><span class="p">(</span><span class="n">ratings</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span>
                               <span class="n">preds</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="prompt input_prompt">In [16]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">precision_at_k</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">ratings</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">user_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">user_index</span><span class="p">:</span>
         <span class="n">user_index</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">ratings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -1645,37 +1560,35 @@ likes = likes.tocsr()
         <span class="c1"># predictions = np.array([model.predict(row, i) for i in xrange(ratings.shape[1])])</span>
         <span class="n">top_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">predictions</span><span class="p">[</span><span class="n">user</span><span class="p">,</span> <span class="p">:])[:</span><span class="n">k</span><span class="p">]</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="n">ratings</span><span class="o">.</span><span class="n">getrow</span><span class="p">(</span><span class="n">user</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span>
-        <span class="n">precision</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">top_k</span><span class="p">)</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">labels</span><span class="p">)))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">precision</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">top_k</span><span class="p">)</span> <span class="o">&</span> <span class="nb">set</span><span class="p">(</span><span class="n">labels</span><span class="p">)))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
         <span class="n">precisions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">precision</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">precisions</span><span class="p">)</span>        
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[17]:</div>
+<div class="prompt input_prompt">In [17]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">print_log</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
-    <span class="n">top</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-    <span class="n">middle</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-    <span class="n">bottom</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="s1">''</span>
+    <span class="n">middle</span> <span class="o">=</span> <span class="s1">''</span>
+    <span class="n">bottom</span> <span class="o">=</span> <span class="s1">''</span>
     <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
-        <span class="n">top</span> <span class="o">+=</span> <span class="s1">&#39;+</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="n">top</span> <span class="o">+=</span> <span class="s1">'+</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">'-'</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;| {0:^</span><span class="si">{1}</span><span class="s1">} &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">'| {0:^</span><span class="si">{1}</span><span class="s1">} '</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;| {0:^</span><span class="si">{1}</span><span class="s1">} &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">'| {0:^</span><span class="si">{1}</span><span class="s1">} '</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
-            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;| {0:^</span><span class="si">{1}</span><span class="s1">.5f} &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
-        <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">&#39;+</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
-    <span class="n">top</span> <span class="o">+=</span> <span class="s1">&#39;+&#39;</span>
-    <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;|&#39;</span>
-    <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">&#39;+&#39;</span>
+            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">'| {0:^</span><span class="si">{1}</span><span class="s1">.5f} '</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">'+</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">'='</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
+    <span class="n">top</span> <span class="o">+=</span> <span class="s1">'+'</span>
+    <span class="n">middle</span> <span class="o">+=</span> <span class="s1">'|'</span>
+    <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">'+'</span>
     <span class="k">if</span> <span class="n">header</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">top</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">middle</span><span class="p">)</span>
@@ -1684,17 +1597,15 @@ likes = likes.tocsr()
         <span class="nb">print</span><span class="p">(</span><span class="n">middle</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">top</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[18]:</div>
+<div class="prompt input_prompt">In [18]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">learning_curve</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">epochs</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">user_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">user_index</span><span class="p">:</span>
         <span class="n">user_index</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -1704,13 +1615,13 @@ likes = likes.tocsr()
     <span class="n">test_precision</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">test_mse</span> <span class="o">=</span> <span class="p">[]</span>
     
-    <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;epochs&#39;</span><span class="p">,</span> <span class="s1">&#39;p@k train&#39;</span><span class="p">,</span> <span class="s1">&#39;p@k test&#39;</span><span class="p">,</span>
-               <span class="s1">&#39;mse train&#39;</span><span class="p">,</span> <span class="s1">&#39;mse test&#39;</span><span class="p">]</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'epochs'</span><span class="p">,</span> <span class="s1">'p@k train'</span><span class="p">,</span> <span class="s1">'p@k test'</span><span class="p">,</span>
+               <span class="s1">'mse train'</span><span class="p">,</span> <span class="s1">'mse test'</span><span class="p">]</span>
     <span class="n">print_log</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     
     <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="n">epochs</span><span class="p">:</span>
         <span class="n">model</span><span class="o">.</span><span class="n">iterations</span> <span class="o">=</span> <span class="n">epoch</span> <span class="o">-</span> <span class="n">prev_epoch</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;user_vectors&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">'user_vectors'</span><span class="p">):</span>
             <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">model</span><span class="o">.</span><span class="n">fit_partial</span><span class="p">(</span><span class="n">train</span><span class="p">)</span>
@@ -1724,23 +1635,21 @@ likes = likes.tocsr()
         <span class="n">prev_epoch</span> <span class="o">=</span> <span class="n">epoch</span>
     <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">train_precision</span><span class="p">,</span> <span class="n">train_mse</span><span class="p">,</span> <span class="n">test_precision</span><span class="p">,</span> <span class="n">test_mse</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[19]:</div>
+<div class="prompt input_prompt">In [19]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">grid_search_learning_curve</span><span class="p">(</span><span class="n">base_model</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">param_grid</span><span class="p">,</span>
                                <span class="n">user_index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">patk</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">2</span><span class="p">)):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    &quot;Inspired&quot; (stolen) from sklearn gridsearch</span>
+    <span class="sd">"""</span>
+<span class="sd">    "Inspired" (stolen) from sklearn gridsearch</span>
 <span class="sd">    https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/model_selection/_search.py</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">curves</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">param_grid</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
     <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="o">*</span><span class="n">values</span><span class="p">):</span>
@@ -1751,79 +1660,69 @@ likes = likes.tocsr()
             <span class="nb">setattr</span><span class="p">(</span><span class="n">this_model</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
             <span class="n">print_line</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; | &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">print_line</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">' | '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">'</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">print_line</span><span class="p">))</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">train_patk</span><span class="p">,</span> <span class="n">train_mse</span><span class="p">,</span> <span class="n">test_patk</span><span class="p">,</span> <span class="n">test_mse</span> <span class="o">=</span> <span class="n">learning_curve</span><span class="p">(</span><span class="n">this_model</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span>
                                                                 <span class="n">epochs</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">patk</span><span class="p">,</span> <span class="n">user_index</span><span class="o">=</span><span class="n">user_index</span><span class="p">)</span>
-        <span class="n">curves</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="n">params</span><span class="p">,</span>
-                       <span class="s1">&#39;patk&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;train&#39;</span><span class="p">:</span> <span class="n">train_patk</span><span class="p">,</span> <span class="s1">&#39;test&#39;</span><span class="p">:</span> <span class="n">test_patk</span><span class="p">},</span>
-                       <span class="s1">&#39;mse&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;train&#39;</span><span class="p">:</span> <span class="n">train_mse</span><span class="p">,</span> <span class="s1">&#39;test&#39;</span><span class="p">:</span> <span class="n">test_mse</span><span class="p">}})</span>
+        <span class="n">curves</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">'params'</span><span class="p">:</span> <span class="n">params</span><span class="p">,</span>
+                       <span class="s1">'patk'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'train'</span><span class="p">:</span> <span class="n">train_patk</span><span class="p">,</span> <span class="s1">'test'</span><span class="p">:</span> <span class="n">test_patk</span><span class="p">},</span>
+                       <span class="s1">'mse'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'train'</span><span class="p">:</span> <span class="n">train_mse</span><span class="p">,</span> <span class="s1">'test'</span><span class="p">:</span> <span class="n">test_mse</span><span class="p">}})</span>
     <span class="k">return</span> <span class="n">curves</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Please note that the below parameter grid is fucking huge and took like 2 days to run on my 6-year old 4-core i5. It turns out that the performance metrics functions are actually a good bit slower than the training process. These functions could be simply paralellized - something for me to do on a later date.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[20]:</div>
+<div class="prompt input_prompt">In [20]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">param_grid</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;num_factors&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">120</span><span class="p">],</span>
-              <span class="s1">&#39;regularization&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1e-1</span><span class="p">,</span> <span class="mf">1e1</span><span class="p">,</span> <span class="mf">1e2</span><span class="p">],</span>
-              <span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">]}</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">param_grid</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'num_factors'</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">120</span><span class="p">],</span>
+              <span class="s1">'regularization'</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1e-1</span><span class="p">,</span> <span class="mf">1e1</span><span class="p">,</span> <span class="mf">1e2</span><span class="p">],</span>
+              <span class="s1">'alpha'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">]}</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[21]:</div>
+<div class="prompt input_prompt">In [21]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">base_model</span> <span class="o">=</span> <span class="n">implicit</span><span class="o">.</span><span class="n">ALS</span><span class="p">()</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[22]:</div>
+<div class="prompt input_prompt">In [22]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">curves</span> <span class="o">=</span> <span class="n">grid_search_learning_curve</span><span class="p">(</span><span class="n">base_model</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span>
                                     <span class="n">param_grid</span><span class="p">,</span>
                                     <span class="n">user_index</span><span class="o">=</span><span class="n">user_index</span><span class="p">,</span>
                                     <span class="n">patk</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>The training log is ridculously long, but feel free to click <a href="http://blog.ethanrosenthal.com/assets/logs/wrmf_gridsearch.log">here</a> and check it out. Otherwise, here's the printout of the best run:</p>
-
 <pre><code>alpha: 50 | num_factors: 40 | regularization: 0.1
 +------------+------------+------------+------------+------------+
 |   epochs   | p@k train  |  p@k test  | mse train  |  mse test  |
@@ -1866,7 +1765,6 @@ likes = likes.tocsr()
 +------------+------------+------------+------------+------------+
 |     38     |  0.28153   |  0.04637   |  0.01295   |  0.01383   |
 +------------+------------+------------+------------+------------+</code></pre>
-
 </div>
 </div>
 </div>
@@ -1875,92 +1773,71 @@ likes = likes.tocsr()
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Let's see what the learning curve looks like for our best run.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="prompt input_prompt">In [23]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">best_curves</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">curves</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;patk&#39;</span><span class="p">][</span><span class="s1">&#39;test&#39;</span><span class="p">]),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">best_curves</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">curves</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="s1">'patk'</span><span class="p">][</span><span class="s1">'test'</span><span class="p">]),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[24]:</div>
+<div class="prompt input_prompt">In [24]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;params&#39;</span><span class="p">])</span>
-<span class="n">max_score</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;patk&#39;</span><span class="p">][</span><span class="s1">&#39;test&#39;</span><span class="p">])</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'params'</span><span class="p">])</span>
+<span class="n">max_score</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'patk'</span><span class="p">][</span><span class="s1">'test'</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">max_score</span><span class="p">)</span>
-<span class="n">iterations</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">2</span><span class="p">)[</span><span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;patk&#39;</span><span class="p">][</span><span class="s1">&#39;test&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">max_score</span><span class="p">)]</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Epoch: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">iterations</span><span class="p">))</span>
+<span class="n">iterations</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">2</span><span class="p">)[</span><span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'patk'</span><span class="p">][</span><span class="s1">'test'</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">max_score</span><span class="p">)]</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Epoch: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">iterations</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>{&#39;alpha&#39;: 50, &#39;num_factors&#39;: 40, &#39;regularization&#39;: 0.1}
+<pre>{'alpha': 50, 'num_factors': 40, 'regularization': 0.1}
 0.0476096922069
 Epoch: 22
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[25]:</div>
+<div class="prompt input_prompt">In [25]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
-<span class="n">sns</span><span class="o">.</span><span class="n">set_style</span><span class="p">(</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_style</span><span class="p">(</span><span class="s1">'white'</span><span class="p">)</span>
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
 <span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">(</span><span class="n">fig</span><span class="p">);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">epochs</span><span class="p">,</span> <span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;patk&#39;</span><span class="p">][</span><span class="s1">&#39;test&#39;</span><span class="p">]);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Epochs&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Test p@k&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">epochs</span><span class="p">,</span> <span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'patk'</span><span class="p">][</span><span class="s1">'test'</span><span class="p">]);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">'Epochs'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">'Test p@k'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">);</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Best learning curve&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">30</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">'Best learning curve'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">30</span><span class="p">);</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
-
 <div class="output_png output_subarea ">
 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAiUAAAGPCAYAAACDAqD+AAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
 AAALEgAACxIB0t1+/AAAIABJREFUeJzs3XlcVPX6wPHPmWFYBNkFRRAXVHJDUrSUcisxu5pkm6VZ
@@ -2435,15 +2312,11 @@ GD6PiopCZGSkYQ3K7d5//30MHDgQX3zxBQ4fPoyamhr4+Phg+vTpeOWVV4wOVbu9bfdqu97f/vY3
 9OzZE9u3b8fZs2fx448/QhRFPP7445gwYQKmTZuGDh06NOjPiehRJoj3+k8CIqJmpn8hX0hICHel
 EJEB15QQERGRVWAoISIiIqvAUEJERERWgaGEiCxCEIR7LiglokcLF7oSERGRVeBICREREVkFhhIi
 IiKyCgwlREREZBUYSoiIiMgqMJQQERGRVWAoISIiIqvwf+EoS4s5hpmSAAAAAElFTkSuQmCC
-"
->
-</div>
-
-</div>
-
+"/>
 </div>
 </div>
-
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
@@ -2451,28 +2324,25 @@ IiKyCgwlREREZBUYSoiIiMgqMJQQERGRVWAoISIiIqvwf+EoS4s5hpmSAAAAAElFTkSuQmCC
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>While the curve is a bit jagged, it does not decrease too significantly as we move past our best epoch of 22. This means we do not have to be super careful implementing early stopping (if we take p@k to be the only metric that we care about).</p>
 <p>We can plot all of our learning curves and see that differences in hyperparameters <em>definitely</em> make a difference in performance.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[26]:</div>
+<div class="prompt input_prompt">In [26]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">all_test_patks</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;patk&#39;</span><span class="p">][</span><span class="s1">&#39;test&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">best_curves</span><span class="p">]</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">all_test_patks</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">'patk'</span><span class="p">][</span><span class="s1">'test'</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">best_curves</span><span class="p">]</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[27]:</div>
+<div class="prompt input_prompt">In [27]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">10</span><span class="p">));</span>
 <span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">(</span><span class="n">fig</span><span class="p">);</span>
 <span class="n">epochs</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
@@ -2482,28 +2352,19 @@ IiKyCgwlREREZBUYSoiIiMgqMJQQERGRVWAoISIiIqvwf+EoS4s5hpmSAAAAAElFTkSuQmCC
              <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="o">.</span><span class="mi">1</span><span class="o">*</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span>
              <span class="n">c</span><span class="o">=</span><span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">()[</span><span class="mi">0</span><span class="p">]);</span>
     
-<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Epochs&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Test p@k&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">'Epochs'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">'Test p@k'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">);</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Grid-search p@k traces&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">30</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">'Grid-search p@k traces'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">30</span><span class="p">);</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
-
 <div class="output_png output_subarea ">
 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhsAAAKKCAYAAACUHZlbAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
 AAALEgAACxIB0t1+/AAAIABJREFUeJzsnXd8FHX+/18zO9s3m15I6MUEUASpigjCndzZkLOgInCA
@@ -5928,53 +5789,44 @@ V155xeRhXy1ra6t2g9dffx1DhgxBbm4uTp8+jV9++QVCCDz++OOYPXs2YmJi4OPjY9X7RPQwk4m2
 uvpERFYyLMSmVqt5lwYRGXHOBhEREdkUOxtERERkU+xsEBERkU2xs0FEnUomk7U5EZOIHi6cIEpE
 REQ2xZENIiIisil2NoiIiMim2NkgIiIim2Jng4iIiGyKnQ0iIiKyKXY2iIiIyKb+B21iSl1jF7hC
 AAAAAElFTkSuQmCC
-"
->
-</div>
-
-</div>
-
+"/>
 </div>
 </div>
-
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Rec-a-sketch">Rec-a-sketch<a class="anchor-link" href="#Rec-a-sketch">&#182;</a></h2><p>After all that, we finally have some optimal hyperparameters. We could now do a finer grid search or look at how varying the ratio between user and item regularization effects results, but I don't feel like waiting another 2 days...</p>
+<h2 id="Rec-a-sketch">Rec-a-sketch<a class="anchor-link" href="#Rec-a-sketch">¶</a></h2><p>After all that, we finally have some optimal hyperparameters. We could now do a finer grid search or look at how varying the ratio between user and item regularization effects results, but I don't feel like waiting another 2 days...</p>
 <p>We'll now train a WRMF model on <em>all</em> of our data with the optimal hyper parameters and visualize some item-to-item recommendations. User-to-item recommendations are a bit more difficult to visualize and get a feel for how accurate they may be.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[28]:</div>
+<div class="prompt input_prompt">In [28]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">params</span> <span class="o">=</span> <span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;params&#39;</span><span class="p">]</span>
-<span class="n">params</span><span class="p">[</span><span class="s1">&#39;iterations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">2</span><span class="p">)[</span><span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;patk&#39;</span><span class="p">][</span><span class="s1">&#39;test&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">max_score</span><span class="p">)]</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">params</span> <span class="o">=</span> <span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'params'</span><span class="p">]</span>
+<span class="n">params</span><span class="p">[</span><span class="s1">'iterations'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">2</span><span class="p">)[</span><span class="n">best_curves</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'patk'</span><span class="p">][</span><span class="s1">'test'</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">max_score</span><span class="p">)]</span>
 <span class="n">bestALS</span> <span class="o">=</span> <span class="n">implicit</span><span class="o">.</span><span class="n">ALS</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[29]:</div>
+<div class="prompt input_prompt">In [29]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">bestALS</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">likes</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
@@ -5982,351 +5834,244 @@ AAAAAElFTkSuQmCC
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>To get item-to-item recommendations, I made a small method <code>predict_for_items</code> in the <code>ALS</code> class. This is essentially just a dot product between every combination of item vectors. If you let <code>norm=True</code> (the default), then this dot product is normalized by the norm of each item vector resulting in the cosine similarity. This tells us how similar two items are in the embedded, or latent space.</p>
 <div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">predict_for_items</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Recommend products for all products&quot;&quot;&quot;</span>
+        <span class="sd">"""Recommend products for all products"""</span>
         <span class="n">pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">item_vectors</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">item_vectors</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">norm</span><span class="p">:</span>
             <span class="n">norms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">pred</span><span class="p">))])</span>
             <span class="n">pred</span> <span class="o">=</span> <span class="n">pred</span> <span class="o">/</span> <span class="n">norms</span> <span class="o">/</span> <span class="n">norms</span><span class="o">.</span><span class="n">T</span>
         <span class="k">return</span> <span class="n">pred</span>
 </pre></div>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[30]:</div>
+<div class="prompt input_prompt">In [30]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">item_similarities</span> <span class="o">=</span> <span class="n">bestALS</span><span class="o">.</span><span class="n">predict_for_items</span><span class="p">()</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Let's now visualize some of the models and their associated recommendations to get a feel for how well our recommender is working. We can simply query the sketchfab api to grab the models' thumbnails. Below is a helper function, that uses the item similarities, an index, and the index-to-<code>mid</code> mapper to return a list of the recommendations' thumbnail urls. Note that the first recommendation is always the model itself due to it having a cosine similarity of 1 with itself.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[31]:</div>
+<div class="prompt input_prompt">In [31]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">requests</span>
 <span class="k">def</span> <span class="nf">get_thumbnails</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">idx_to_mid</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
     <span class="n">row</span> <span class="o">=</span> <span class="n">sim</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
     <span class="n">thumbs</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">row</span><span class="p">)[:</span><span class="n">N</span><span class="p">]:</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://sketchfab.com/i/models/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_to_mid</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-        <span class="n">thumb</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;thumbnails&#39;</span><span class="p">][</span><span class="s1">&#39;images&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span><span class="o">==</span><span class="mi">200</span><span class="p">]</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'https://sketchfab.com/i/models/</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_to_mid</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="n">thumb</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">'url'</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s1">'thumbnails'</span><span class="p">][</span><span class="s1">'images'</span><span class="p">]</span> <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s1">'width'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="s1">'height'</span><span class="p">]</span><span class="o">==</span><span class="mi">200</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">thumb</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;no thumbnail&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">'no thumbnail'</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">thumb</span> <span class="o">=</span> <span class="n">thumb</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">thumbs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thumb</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">thumbs</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[32]:</div>
+<div class="prompt input_prompt">In [32]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">thumbs</span> <span class="o">=</span> <span class="n">get_thumbnails</span><span class="p">(</span><span class="n">item_similarities</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">idx_to_mid</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[33]:</div>
+<div class="prompt input_prompt">In [33]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">thumbs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>https://dg5bepmjyhz9h.cloudfront.net/urls/5dcebcfaedbd4e7b8a27bd1ae55f1ac3/dist/thumbnails/a59f9de0148e4986a181483f47826fe0/200x200.jpeg
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>We can now display the images using some HTML and core <code>IPython</code> functions.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[34]:</div>
+<div class="prompt input_prompt">In [34]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">IPython.display</span> <span class="k">import</span> <span class="n">display</span><span class="p">,</span> <span class="n">HTML</span>
 
 <span class="k">def</span> <span class="nf">display_thumbs</span><span class="p">(</span><span class="n">thumbs</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
-    <span class="n">thumb_html</span> <span class="o">=</span> <span class="s2">&quot;&lt;img style=&#39;width: 160px; margin: 0px; </span><span class="se">\</span>
-<span class="s2">                  float: left; border: 1px solid black;&#39; src=&#39;</span><span class="si">{}</span><span class="s2">&#39; /&gt;&quot;</span>
-    <span class="n">images</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-    <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="s1">&#39;&lt;font size=5&gt;&#39;</span><span class="o">+</span><span class="s1">&#39;Input Model&#39;</span><span class="o">+</span><span class="s1">&#39;&lt;/font&gt;&#39;</span><span class="p">))</span>
+    <span class="n">thumb_html</span> <span class="o">=</span> <span class="s2">"<img style='width: 160px; margin: 0px; </span><span class="se">\</span>
+<span class="s2">                  float: left; border: 1px solid black;' src='</span><span class="si">{}</span><span class="s2">' />"</span>
+    <span class="n">images</span> <span class="o">=</span> <span class="s1">''</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="s1">'<font size=5>'</span><span class="o">+</span><span class="s1">'Input Model'</span><span class="o">+</span><span class="s1">'</font>'</span><span class="p">))</span>
     <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">thumb_html</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">thumbs</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span>
-    <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="s1">&#39;&lt;font size=5&gt;&#39;</span><span class="o">+</span><span class="s1">&#39;Similar Models&#39;</span><span class="o">+</span><span class="s1">&#39;&lt;/font&gt;&#39;</span><span class="p">))</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="s1">'<font size=5>'</span><span class="o">+</span><span class="s1">'Similar Models'</span><span class="o">+</span><span class="s1">'</font>'</span><span class="p">))</span>
 
     <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">thumbs</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="p">]:</span>
         <span class="n">images</span> <span class="o">+=</span> <span class="n">thumb_html</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
     <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">images</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[35]:</div>
+<div class="prompt input_prompt">In [35]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Select a random index</span>
 <span class="n">rand_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx_to_mid</span><span class="p">))</span>
 <span class="n">display_thumbs</span><span class="p">(</span><span class="n">get_thumbnails</span><span class="p">(</span><span class="n">item_similarities</span><span class="p">,</span> <span class="n">rand_model</span><span class="p">,</span> <span class="n">idx_to_mid</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<font size=5>Input Model</font>
+<font size="5">Input Model</font>
 </div>
-
 </div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/b8d4bde0991c409c8a0ed81d07381de7/dist/thumbnails/27661328dab148ec96c9df5cf9b012d6/200x200.jpeg' />
+<img src="https://dg5bepmjyhz9h.cloudfront.net/urls/b8d4bde0991c409c8a0ed81d07381de7/dist/thumbnails/27661328dab148ec96c9df5cf9b012d6/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;">
+</img></div>
 </div>
-
-</div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<font size=5>Similar Models</font>
+<font size="5">Similar Models</font>
 </div>
-
 </div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/cededeb8878a497bb23efd4271c81ad0/dist/thumbnails/7c2897b67bbf426486171f05c93cf746/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/8b5df3bb5b83475f9987cfc62be9cde7/dist/thumbnails/adf9239ff3a9421e9bd9b7e512ebe9ee/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/708a4166439c45d799f4eaa40d0db70e/dist/thumbnails/1dc4b56eaedf4aa59b8f7533ae1a1086/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/0f64263b13704ba684c90479f9fc8c6e/dist/thumbnails/50351c3cb12c48c5844abd4098a7ccca/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/6c29af34dfba43ceabd3a690e9bb3a91/dist/thumbnails/f7f24914ae4e43d49bec1da970b74240/200x200.jpeg' />
-</div>
-
-</div>
-
+<img src="https://dg5bepmjyhz9h.cloudfront.net/urls/cededeb8878a497bb23efd4271c81ad0/dist/thumbnails/7c2897b67bbf426486171f05c93cf746/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/8b5df3bb5b83475f9987cfc62be9cde7/dist/thumbnails/adf9239ff3a9421e9bd9b7e512ebe9ee/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/708a4166439c45d799f4eaa40d0db70e/dist/thumbnails/1dc4b56eaedf4aa59b8f7533ae1a1086/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/0f64263b13704ba684c90479f9fc8c6e/dist/thumbnails/50351c3cb12c48c5844abd4098a7ccca/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/6c29af34dfba43ceabd3a690e9bb3a91/dist/thumbnails/f7f24914ae4e43d49bec1da970b74240/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/>
+</img></div>
 </div>
 </div>
-
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[36]:</div>
+<div class="prompt input_prompt">In [36]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Select another random index</span>
 <span class="n">rand_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx_to_mid</span><span class="p">))</span>
 <span class="n">display_thumbs</span><span class="p">(</span><span class="n">get_thumbnails</span><span class="p">(</span><span class="n">item_similarities</span><span class="p">,</span> <span class="n">rand_model</span><span class="p">,</span> <span class="n">idx_to_mid</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<font size=5>Input Model</font>
+<font size="5">Input Model</font>
 </div>
-
 </div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/eeba39946a244407a4c89670259599b5/dist/thumbnails/812ba9a2fdf744778ca4ad2133d945c6/200x200.jpeg' />
+<img src="https://dg5bepmjyhz9h.cloudfront.net/urls/eeba39946a244407a4c89670259599b5/dist/thumbnails/812ba9a2fdf744778ca4ad2133d945c6/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/>
 </div>
-
 </div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<font size=5>Similar Models</font>
+<font size="5">Similar Models</font>
 </div>
-
 </div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/ce66822c040a4d2bbb9dfe3bcdf195d0/dist/thumbnails/04dbe09fc9414c5992d14a13d2b2391d/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/a3b53610a3334700910b51410f8f3210/dist/thumbnails/5a95bd47303d4852a6abdf4ef18cd674/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/5cc5d504e184411bb5e9a675955ee40b/dist/thumbnails/1a149e6d58fa455da1bcde9a229b1c6c/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/9b8876c330234308819cefb810ea5e4d/dist/thumbnails/e1960bcfd7864c0c82823704dd4750ba/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/3be90422f5224bc5a08d5f9a8a9d3f05/dist/thumbnails/1fdecc0679d94769b205d36fc72bdb16/200x200.jpeg' />
-</div>
-
-</div>
-
+<img src="https://dg5bepmjyhz9h.cloudfront.net/urls/ce66822c040a4d2bbb9dfe3bcdf195d0/dist/thumbnails/04dbe09fc9414c5992d14a13d2b2391d/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/a3b53610a3334700910b51410f8f3210/dist/thumbnails/5a95bd47303d4852a6abdf4ef18cd674/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/5cc5d504e184411bb5e9a675955ee40b/dist/thumbnails/1a149e6d58fa455da1bcde9a229b1c6c/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/9b8876c330234308819cefb810ea5e4d/dist/thumbnails/e1960bcfd7864c0c82823704dd4750ba/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/3be90422f5224bc5a08d5f9a8a9d3f05/dist/thumbnails/1fdecc0679d94769b205d36fc72bdb16/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/>
 </div>
 </div>
-
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[37]:</div>
+<div class="prompt input_prompt">In [37]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># One more for good luck</span>
 <span class="n">rand_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx_to_mid</span><span class="p">))</span>
 <span class="n">display_thumbs</span><span class="p">(</span><span class="n">get_thumbnails</span><span class="p">(</span><span class="n">item_similarities</span><span class="p">,</span> <span class="n">rand_model</span><span class="p">,</span> <span class="n">idx_to_mid</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<font size=5>Input Model</font>
+<font size="5">Input Model</font>
 </div>
-
 </div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/1818214ab7504301b9a8034f1edfbdc0/dist/thumbnails/a17a7f39a3aa4d329e745d4eabf411cd/200x200.jpeg' />
+<img src="https://dg5bepmjyhz9h.cloudfront.net/urls/1818214ab7504301b9a8034f1edfbdc0/dist/thumbnails/a17a7f39a3aa4d329e745d4eabf411cd/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/>
 </div>
-
 </div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<font size=5>Similar Models</font>
+<font size="5">Similar Models</font>
 </div>
-
 </div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/bc3516e5018b443fb1aff108458554e5/dist/thumbnails/3b5960b4fe314532a1b435217e1c9d28/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/69675a14aa894f2db5d6c032d1353cfc/dist/thumbnails/139a8969cb7c4a9db133e3d28675686d/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/63619609d9bd4e1bade5cdc7c74717d8/dist/thumbnails/fe9602aeaee947979f47cfe660935cfc/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/53745acff64a43ac93da4a7ee5adcca8/dist/thumbnails/d0f205f90a054188a70869177eb799db/200x200.jpeg' /><img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/52b2e68ad8df4fb39d979271c74712a5/dist/thumbnails/4c34a39c11f5411b8ef10709c3dbd4de/200x200.jpeg' />
-</div>
-
-</div>
-
+<img src="https://dg5bepmjyhz9h.cloudfront.net/urls/bc3516e5018b443fb1aff108458554e5/dist/thumbnails/3b5960b4fe314532a1b435217e1c9d28/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/69675a14aa894f2db5d6c032d1353cfc/dist/thumbnails/139a8969cb7c4a9db133e3d28675686d/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/63619609d9bd4e1bade5cdc7c74717d8/dist/thumbnails/fe9602aeaee947979f47cfe660935cfc/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/53745acff64a43ac93da4a7ee5adcca8/dist/thumbnails/d0f205f90a054188a70869177eb799db/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/52b2e68ad8df4fb39d979271c74712a5/dist/thumbnails/4c34a39c11f5411b8ef10709c3dbd4de/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/>
 </div>
 </div>
-
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
@@ -6335,14 +6080,11 @@ AAAAAElFTkSuQmCC
 <p>While the recommendations may not be perfect (see police car + green monster above), it's obvious that our recommendation model has learned similarities.</p>
 <p>Take a step back and think about this for a second:</p>
 <p>Our algorithm knows nothing about what these models look like, what tags they may have on them, or anything about the artists. The algorithm simply knows which users have liked which models. Pretty creepy, huh?</p>
-<h2 id="What's-next?">What's next?<a class="anchor-link" href="#What's-next?">&#182;</a></h2><p>Today we learned Weighted Regularized Matrix Factorization, the classic rock of implicit MF. Next time, we'll learn about another method of optimizing implicit feedback models called Learning to Rank. With Learning to Rank models, we'll be able to include extra information about the models and users such as the categories and tags assigned to the models. After that, we'll see how an unsupervised recommendation using images and pretrained neural networks compares to these methods, and then finally we'll build a flask app to serve these recommendations to an end user.</p>
+<h2 id="What's-next?">What's next?<a class="anchor-link" href="#What's-next?">¶</a></h2><p>Today we learned Weighted Regularized Matrix Factorization, the classic rock of implicit MF. Next time, we'll learn about another method of optimizing implicit feedback models called Learning to Rank. With Learning to Rank models, we'll be able to include extra information about the models and users such as the categories and tags assigned to the models. After that, we'll see how an unsupervised recommendation using images and pretrained neural networks compares to these methods, and then finally we'll build a flask app to serve these recommendations to an end user.</p>
 <p>Stay tuned!</p>
-
 </div>
 </div>
 </div>
- 
-
 
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var mathjaxscript = document.createElement('script');

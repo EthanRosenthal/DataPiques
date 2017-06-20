@@ -1017,11 +1017,9 @@ h6:hover .anchor-link {
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 
-
 <p>In this post we're going to do a bunch of cool things following up on the last <a href="http://blog.ethanrosenthal.com/2016/10/19/implicit-mf-part-1/">post</a> introducing implicit matrix factorization. We're going to explore Learning to Rank, a different method for implicit matrix factorization, and then use the library <a href="http://lyst.github.io/lightfm/docs/home.html">LightFM</a> to incorporate side information into our recommender. Next, we'll use <a href="https://scikit-optimize.github.io/">scikit-optimize</a> to be smarter than grid search for cross validating hyperparameters. Lastly, we'll see that we can move beyond simple user-to-item and item-to-item recommendations now that we have side information embedded in the same space as our users and items. Let's go!</p>
 
-
-<h2 id="History-lesson">History lesson<a class="anchor-link" href="#History-lesson">&#182;</a></h2><p>When I started working at Birchbox, I was tasked with finding a way to incorporate our rich customer information into the implicit feedback matrix factorization recommendation system. I had no idea what I was doing, so I did a lot of google searching. This proved a difficult problem because there are commonly two paradigms of recommender systems - content-based approaches, like when one has demographic customer data and uses this data to find other similar customers, and "ratings-based" approaches, like when one has data on what each user rated each item they interacted with. The desire was for me to marry these two approaches.</p>
+<h2 id="History-lesson">History lesson<a class="anchor-link" href="#History-lesson">¶</a></h2><p>When I started working at Birchbox, I was tasked with finding a way to incorporate our rich customer information into the implicit feedback matrix factorization recommendation system. I had no idea what I was doing, so I did a lot of google searching. This proved a difficult problem because there are commonly two paradigms of recommender systems - content-based approaches, like when one has demographic customer data and uses this data to find other similar customers, and "ratings-based" approaches, like when one has data on what each user rated each item they interacted with. The desire was for me to marry these two approaches.</p>
 <p>Reading through the classic survey article, <a href="http://www.columbia.edu/~jwp2128/Teaching/W4721/papers/ieeecomputer.pdf">Matrix Factorization Techniques for Recommender Systems</a> (pdf link), revealed a section titled "Additional Input Sources". This contains one such approach to incorporating so-called "side information" into a recommender system. The idea was relatively simple (well, simple relative to the initial hurdle of wrapping one's head around matrix factorization). Let's say that in a regular matrix factorization model, a user $u$ is represented by a single vector $\textbf{x}_{u}$ containing that user's latent factors (see previous posts for more background on this). Now, let's say that we have some demographic information about that user like</p>
 <table>
 <thead><tr>
@@ -1045,10 +1043,10 @@ h6:hover .anchor-link {
 </tbody>
 </table>
 <p>We can one-hot-encode each of these features into an "attribute-space" $A$ and assume that each each attribute $a$ has its own latent vector $\textbf{s}_{a}$. Lastly, we make the assumption that our "total" user vector is the original user vector $\textbf{x}_{u}$ plus each of the relevant attribute vectors. If $N(u)$ represents the set of attributes that pertain to user $u$, then the total user vector is</p>
-$$\textbf{x}_{u} + \sum\limits_{a \in N(u)}\textbf{s}_{a}$$<p>One can make the same set of assumptions for side information about the items, and now you can not only achieve better results with your recommendations, but you can also learn vectors and consequently similarities between the side information vectors. For a general overview of this, see a <a href="https://making.dia.co/hiring-data-scientists-a-classification-problem-456affe73592#.pk693a7x0">post</a> I wrote for Dia&amp;Co's <a href="https://making.dia.co/">tech blog</a>.</p>
+$$\textbf{x}_{u} + \sum\limits_{a \in N(u)}\textbf{s}_{a}$$<p>One can make the same set of assumptions for side information about the items, and now you can not only achieve better results with your recommendations, but you can also learn vectors and consequently similarities between the side information vectors. For a general overview of this, see a <a href="https://making.dia.co/hiring-data-scientists-a-classification-problem-456affe73592#.pk693a7x0">post</a> I wrote for Dia&Co's <a href="https://making.dia.co/">tech blog</a>.</p>
 <p>Ok, the approach is clear, so presumably we just add this to last post's implicit feedback objective function and solve, right? Well, I ran the math, and unfortunately this is not scalable. With the extra set of side information vectors, last post's Alternating Least Squares (ALS) becomes a three-way alternating problem. There was a special trick in that ALS optimization that exploited the sparsity of the data to scale the computation. Alas, this trick cannot be used during the stage of ALS where one is solving for the side information vectors.</p>
 <p>So what to do now?</p>
-<h2 id="Learning-to-Rank---BPR">Learning to Rank - BPR<a class="anchor-link" href="#Learning-to-Rank---BPR">&#182;</a></h2><p>It turns out that there is another method of optimizing implicit feedback matrix factorization problems which is neither ALS nor conventional stochastic gradient descent (SGD) on last post's objective function. This method of optimization typically goes by the name <a href="https://en.wikipedia.org/wiki/Learning_to_rank">Learning to Rank</a> and originated in information retrieval theory.</p>
+<h2 id="Learning-to-Rank---BPR">Learning to Rank - BPR<a class="anchor-link" href="#Learning-to-Rank---BPR">¶</a></h2><p>It turns out that there is another method of optimizing implicit feedback matrix factorization problems which is neither ALS nor conventional stochastic gradient descent (SGD) on last post's objective function. This method of optimization typically goes by the name <a href="https://en.wikipedia.org/wiki/Learning_to_rank">Learning to Rank</a> and originated in information retrieval theory.</p>
 <p>A classic method of using Learning to Rank with implicit feedback was in the paper <a href="https://arxiv.org/pdf/1205.2618.pdf">BPR: Bayesian Personalized Ranking from Implicit Feedback</a> (pdf link) first-authored by Steffen Rendle who is kind of a badass in all things implicit and factorized. The idea is centered around sampling <em>positive</em> and <em>negative</em> items and running pairwise comparisons. Let's assume that for this example our dataset consists of the number of times users have clicked on various items on a website. BPR proceeds as follows (in simplified form):</p>
 <ol>
 <li>Randomly select a user $u$ and then select a random item $i$ which the user has clicked on. This is our <em>positive</em> item.</li>
@@ -1060,13 +1058,13 @@ $$\textbf{x}_{u} + \sum\limits_{a \in N(u)}\textbf{s}_{a}$$<p>One can make the s
 </ol>
 <p>This method seemed kind of radical to me when I first read it. Notably, we do not care about the actual value of the score that we are predicting. All we care about is that we rank items which the user has clicked on more frequently higher than items which the user has clicked on fewer times. And thus, our model "learns to rank" :)</p>
 <p>Because this model employs a sampling-based approach, the authors show that it can be quite fast and scalable relative to other, slower methods. Additionally, the authors argue that BPR directly optimizes the area under the ROC curve (AUC) which could be a desirable characteristic. Most importantly for me, it allows one to easily add in side information without blowing up the computational speed.</p>
-<h2 id="Learning-to-Rank---WARP">Learning to Rank - WARP<a class="anchor-link" href="#Learning-to-Rank---WARP">&#182;</a></h2><p>A close relative of BPR is Weighted Approximate-Rank Pairwise loss (WARP loss) first introduced in <a href="http://www.thespermwhale.com/jaseweston/papers/wsabie-ijcai.pdf">WSABIE: Scaling Up To Large Vocabulary Image Annotation</a> by Weston et. al. WARP is quite similar to BPR: you sample a positive and negative item for a user, predict for both, and take the difference. In BPR you then make the SGD update with this difference as a weight. In WARP, you only run the SGD update if you predict <em>wrong</em>, i.e. you predict the negative item has a higher score than the positive item. If you do not predict wrong, then you keep drawing negative items until you either get the prediction wrong or reach some cutoff value.</p>
+<h2 id="Learning-to-Rank---WARP">Learning to Rank - WARP<a class="anchor-link" href="#Learning-to-Rank---WARP">¶</a></h2><p>A close relative of BPR is Weighted Approximate-Rank Pairwise loss (WARP loss) first introduced in <a href="http://www.thespermwhale.com/jaseweston/papers/wsabie-ijcai.pdf">WSABIE: Scaling Up To Large Vocabulary Image Annotation</a> by Weston et. al. WARP is quite similar to BPR: you sample a positive and negative item for a user, predict for both, and take the difference. In BPR you then make the SGD update with this difference as a weight. In WARP, you only run the SGD update if you predict <em>wrong</em>, i.e. you predict the negative item has a higher score than the positive item. If you do not predict wrong, then you keep drawing negative items until you either get the prediction wrong or reach some cutoff value.</p>
 <p>The authors of the WARP paper claim that this process shifts from optimizing AUC in BPR to optimizing the precision @ k. The seems likely more relevant for most recommender systems, and I usually have better luck optimizing WARP loss over BPR loss. WARP does introduce two hyperparameters, though. One is the margin which determines how wrong your prediction must be to implement the SGD update. In the paper, the margin is 1 meaning you must guess $p_{uj} \gt p_{ui} + 1$ to implement the SGD update. The other hyperparameter is the cutoff which determines how many times you're willing to draw negative samples trying to get a wrong prediction before you give up and move on to the next user.</p>
 <p>This sampling approach causes WARP to run quickly when it starts training because you easily get predictions wrong with an untrained model. After training, though, WARP will run slower because it has to sample and predict many items until it gets a wrong prediction and can update. Sounds like a positive problem if it's hard to get your model to predict wrong, though.</p>
-<h2 id="LightFM">LightFM<a class="anchor-link" href="#LightFM">&#182;</a></h2><p>Back to my Birchbox story. I originally implemented BPR with side information in pure numpy and scipy. This proved to be quite slow, and around that time the <a href="https://github.com/lyst/lightfm">LightFM</a> package was open sourced by the people at Lyst. LightFM is written in Cython and is paralellized via HOGWILD SGD. This blew my code out of the water, and I happily switched over to LightFM.</p>
+<h2 id="LightFM">LightFM<a class="anchor-link" href="#LightFM">¶</a></h2><p>Back to my Birchbox story. I originally implemented BPR with side information in pure numpy and scipy. This proved to be quite slow, and around that time the <a href="https://github.com/lyst/lightfm">LightFM</a> package was open sourced by the people at Lyst. LightFM is written in Cython and is paralellized via HOGWILD SGD. This blew my code out of the water, and I happily switched over to LightFM.</p>
 <p>LightFM uses the same method as above to incorporate side information - it assumes that the total "user vector" is the sum of each of the user's relevant side information vectors (which it calls user "features) and treats the items analogously. Above, we assumed that we had two types of latent vectors: $\textbf{x}_{u}$ and $\textbf{s}_{a}$. LightFM treats everything as side information, or features. If we want to have a specific user vector for user $u$, then we must one-hot-encode that as a single feature for that user.</p>
 <p>Let's go ahead and install LightFM, read in our good old Sketchfab "likes" data as well as the model tags, and see if we can get better results with LightFM than we did last post using classic ALS.</p>
-<h3 id="Installation">Installation<a class="anchor-link" href="#Installation">&#182;</a></h3><p>LightFM is on pypi, so you can install simplest with pip:</p>
+<h3 id="Installation">Installation<a class="anchor-link" href="#Installation">¶</a></h3><p>LightFM is on pypi, so you can install simplest with pip:</p>
 <div class="highlight"><pre><span></span>pip install lightfm
 </pre></div>
 <p>If you are on a mac, then you will unfortunately not be able to run your code in parallel out of the box. If you would like to use parallelization, you must first make sure you have gcc which can be installed with <code>brew</code>:</p>
@@ -1075,18 +1073,17 @@ $$\textbf{x}_{u} + \sum\limits_{a \in N(u)}\textbf{s}_{a}$$<p>One can make the s
 <p>Be careful, this takes like 30 minutes. The simplest way I've then found to building LightFM is to trick it. First clone the repository</p>
 <div class="highlight"><pre><span></span>git clone git@github.com:lyst/lightfm.git
 </pre></div>
-<p>Then, open <code>setup.py</code> go to where the variable <code>use_openmp</code> is defined, and hard set it to <code>True</code>. Then, <code>cd lightfm &amp;&amp; pip install -e .</code></p>
+<p>Then, open <code>setup.py</code> go to where the variable <code>use_openmp</code> is defined, and hard set it to <code>True</code>. Then, <code>cd lightfm && pip install -e .</code></p>
 <p>With all that done, let's write some code to train some models.</p>
-<h3 id="Data-preprocessing">Data preprocessing<a class="anchor-link" href="#Data-preprocessing">&#182;</a></h3><p>I took a lot of the functions used last time for arranging the Sketchfab data into a matrix and placed them all in a <code>helpers.py</code> file in the rec-a-sketch repo.</p>
-
+<h3 id="Data-preprocessing">Data preprocessing<a class="anchor-link" href="#Data-preprocessing">¶</a></h3><p>I took a lot of the functions used last time for arranging the Sketchfab data into a matrix and placed them all in a <code>helpers.py</code> file in the rec-a-sketch repo.</p>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="prompt input_prompt">In [1]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -1100,116 +1097,96 @@ $$\textbf{x}_{u} + \sum\limits_{a \in N(u)}\textbf{s}_{a}$$<p>One can make the s
 <span class="kn">from</span> <span class="nn">lightfm</span> <span class="k">import</span> <span class="n">LightFM</span>
 <span class="kn">import</span> <span class="nn">lightfm.evaluation</span>
 <span class="kn">import</span> <span class="nn">sys</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../&#39;</span><span class="p">)</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'../'</span><span class="p">)</span>
 <span class="kn">import</span> <span class="nn">helpers</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="prompt input_prompt">In [2]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/model_likes_anon.psv&#39;</span><span class="p">,</span>
-                 <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;|&#39;</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
-                 <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">'../data/model_likes_anon.psv'</span><span class="p">,</span>
+                 <span class="n">sep</span><span class="o">=</span><span class="s1">'|'</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
+                 <span class="n">quotechar</span><span class="o">=</span><span class="s1">'</span><span class="se">\\</span><span class="s1">'</span><span class="p">)</span>
 <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt output_prompt">Out[2]:</div>
-
-
-
 <div class="output_html rendered_html output_subarea output_execute_result">
 <div>
 <table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>modelname</th>
-      <th>mid</th>
-      <th>uid</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>7ac1b40648fff523d7220a5d07b04d9b</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>2b4ad286afe3369d39f1bb7aa2528bc7</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>1bf0993ebab175a896ac8003bed91b4b</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>6484211de8b9a023a7d9ab1641d22e7c</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>3D fanart Noel From Sora no Method</td>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>1109ee298494fbd192e27878432c718a</td>
-    </tr>
-  </tbody>
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>modelname</th>
+<th>mid</th>
+<th>uid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>7ac1b40648fff523d7220a5d07b04d9b</td>
+</tr>
+<tr>
+<th>1</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>2b4ad286afe3369d39f1bb7aa2528bc7</td>
+</tr>
+<tr>
+<th>2</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>1bf0993ebab175a896ac8003bed91b4b</td>
+</tr>
+<tr>
+<th>3</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>6484211de8b9a023a7d9ab1641d22e7c</td>
+</tr>
+<tr>
+<th>4</th>
+<td>3D fanart Noel From Sora no Method</td>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>1109ee298494fbd192e27878432c718a</td>
+</tr>
+</tbody>
 </table>
 </div>
 </div>
-
-</div>
-
 </div>
 </div>
-
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="prompt input_prompt">In [3]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Threshold data to only include users and models with min 5 likes.</span>
-<span class="n">df</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">threshold_interactions_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;uid&#39;</span><span class="p">,</span> <span class="s1">&#39;mid&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">threshold_interactions_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">'uid'</span><span class="p">,</span> <span class="s1">'mid'</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Starting interactions info
 Number of rows: 62583
@@ -1222,77 +1199,60 @@ Sparsity: 0.140%
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="prompt input_prompt">In [4]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Go from dataframe to likes matrix</span>
 <span class="c1"># Also, build index to ID mappers.</span>
 <span class="n">likes</span><span class="p">,</span> <span class="n">uid_to_idx</span><span class="p">,</span> <span class="n">idx_to_uid</span><span class="p">,</span>\
-<span class="n">mid_to_idx</span><span class="p">,</span> <span class="n">idx_to_mid</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">df_to_matrix</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;uid&#39;</span><span class="p">,</span> <span class="s1">&#39;mid&#39;</span><span class="p">)</span>
+<span class="n">mid_to_idx</span><span class="p">,</span> <span class="n">idx_to_mid</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">df_to_matrix</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">'uid'</span><span class="p">,</span> <span class="s1">'mid'</span><span class="p">)</span>
 
 <span class="n">likes</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt output_prompt">Out[4]:</div>
-
-
-
-
 <div class="output_text output_subarea output_execute_result">
-<pre>&lt;15274x25655 sparse matrix of type &#39;&lt;class &#39;numpy.float64&#39;&gt;&#39;
-	with 547477 stored elements in Compressed Sparse Row format&gt;</pre>
-</div>
-
-</div>
-
+<pre><15274x25655 sparse matrix of type '<class 'numpy.float64'>'
+	with 547477 stored elements in Compressed Sparse Row format></pre>
 </div>
 </div>
-
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="prompt input_prompt">In [5]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">user_index</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">train_test_split</span><span class="p">(</span><span class="n">likes</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">fraction</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>The one odd thing that we must do which is different than last time is to copy the training data to only include users with data in the test set. This is due to using LightFM's built-in <code>precision_at_k</code> function as opposed to our hand-rolled one last time and is not particularly interesting.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="prompt input_prompt">In [6]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">eval_train</span> <span class="o">=</span> <span class="n">train</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="n">non_eval_users</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">user_index</span><span class="p">))</span>
 
@@ -1301,258 +1261,213 @@ Sparsity: 0.140%
     <span class="n">eval_train</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mf">0.0</span>
 <span class="n">eval_train</span> <span class="o">=</span> <span class="n">eval_train</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Now we want to one-hot-encode all of the side information that we have about the Sketchfab models. Recall that this information included categories and tags associated with each model. The simplest way I've found to go about encoding this information is to use scikit-learn's <a href="http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.DictVectorizer.html">DictVectorizer</a> class. The <code>DictVectorizer</code> takes in a list of dictionaries where the dictionaries contain features names as keys and weights as values. Here, we'll assume that each weight is 1, and we'll take the key to be the combination of the tag type and value.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="prompt input_prompt">In [7]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sideinfo</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/model_feats.psv&#39;</span><span class="p">,</span>
-                       <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;|&#39;</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
-                       <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sideinfo</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">'../data/model_feats.psv'</span><span class="p">,</span>
+                       <span class="n">sep</span><span class="o">=</span><span class="s1">'|'</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
+                       <span class="n">quotechar</span><span class="o">=</span><span class="s1">'</span><span class="se">\\</span><span class="s1">'</span><span class="p">)</span>
 <span class="n">sideinfo</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt output_prompt">Out[7]:</div>
-
-
-
 <div class="output_html rendered_html output_subarea output_execute_result">
 <div>
 <table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>mid</th>
-      <th>type</th>
-      <th>value</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>category</td>
-      <td>Characters</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>category</td>
-      <td>Gaming</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>tag</td>
-      <td>3dsmax</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>tag</td>
-      <td>noel</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
-      <td>tag</td>
-      <td>loli</td>
-    </tr>
-  </tbody>
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>mid</th>
+<th>type</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>category</td>
+<td>Characters</td>
+</tr>
+<tr>
+<th>1</th>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>category</td>
+<td>Gaming</td>
+</tr>
+<tr>
+<th>2</th>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>tag</td>
+<td>3dsmax</td>
+</tr>
+<tr>
+<th>3</th>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>tag</td>
+<td>noel</td>
+</tr>
+<tr>
+<th>4</th>
+<td>5dcebcfaedbd4e7b8a27bd1ae55f1ac3</td>
+<td>tag</td>
+<td>loli</td>
+</tr>
+</tbody>
 </table>
 </div>
 </div>
-
-</div>
-
 </div>
 </div>
-
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="prompt input_prompt">In [8]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># There&#39;s probably a fancy pandas groupby way to do</span>
-<span class="c1"># this but I couldn&#39;t figure it out :(</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># There's probably a fancy pandas groupby way to do</span>
+<span class="c1"># this but I couldn't figure it out :(</span>
 
 <span class="c1"># Build list of dictionaries containing features </span>
 <span class="c1"># and weights in same order as idx_to_mid prescribes.</span>
 <span class="n">feat_dlist</span> <span class="o">=</span> <span class="p">[{}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">idx_to_mid</span><span class="p">]</span>
 <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">sideinfo</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
-    <span class="n">feat_key</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+    <span class="n">feat_key</span> <span class="o">=</span> <span class="s1">'</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
     <span class="n">idx</span> <span class="o">=</span> <span class="n">mid_to_idx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">mid</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">feat_dlist</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="n">feat_key</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[9]:</div>
+<div class="prompt input_prompt">In [9]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">feat_dlist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt output_prompt">Out[9]:</div>
-
-
-
-
 <div class="output_text output_subarea output_execute_result">
-<pre>{&#39;category_characters&#39;: 1,
- &#39;category_gaming&#39;: 1,
- &#39;tag_3d&#39;: 1,
- &#39;tag_3dcellshade&#39;: 1,
- &#39;tag_3dsmax&#39;: 1,
- &#39;tag_anime&#39;: 1,
- &#39;tag_girl&#39;: 1,
- &#39;tag_loli&#39;: 1,
- &#39;tag_noel&#39;: 1,
- &#39;tag_soranomethod&#39;: 1}</pre>
-</div>
-
-</div>
-
+<pre>{'category_characters': 1,
+ 'category_gaming': 1,
+ 'tag_3d': 1,
+ 'tag_3dcellshade': 1,
+ 'tag_3dsmax': 1,
+ 'tag_anime': 1,
+ 'tag_girl': 1,
+ 'tag_loli': 1,
+ 'tag_noel': 1,
+ 'tag_soranomethod': 1}</pre>
 </div>
 </div>
-
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="prompt input_prompt">In [10]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.feature_extraction</span> <span class="k">import</span> <span class="n">DictVectorizer</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[11]:</div>
+<div class="prompt input_prompt">In [11]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">dv</span> <span class="o">=</span> <span class="n">DictVectorizer</span><span class="p">()</span>
 <span class="n">item_features</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">feat_dlist</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[12]:</div>
+<div class="prompt input_prompt">In [12]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">item_features</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt output_prompt">Out[12]:</div>
-
-
-
-
 <div class="output_text output_subarea output_execute_result">
-<pre>&lt;25655x20352 sparse matrix of type &#39;&lt;class &#39;numpy.float64&#39;&gt;&#39;
-	with 161510 stored elements in Compressed Sparse Row format&gt;</pre>
-</div>
-
-</div>
-
+<pre><25655x20352 sparse matrix of type '<class 'numpy.float64'>'
+	with 161510 stored elements in Compressed Sparse Row format></pre>
 </div>
 </div>
-
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>We are now left with an <code>item_features</code> matrix where each row is a unique item (in the same order as the columns of the <code>likes</code> matrix), and each column is a unique tag. It looks like there are 20352 unique tags!</p>
-<h3 id="Training">Training<a class="anchor-link" href="#Training">&#182;</a></h3><p>Let's try a simple WARP run on LightFM using the default settings and ignoring the item features to start. I am only going to focus on WARP today, as I've never had much luck with BPR. I will create a small function to calculate the learning curve.</p>
-
+<h3 id="Training">Training<a class="anchor-link" href="#Training">¶</a></h3><p>Let's try a simple WARP run on LightFM using the default settings and ignoring the item features to start. I am only going to focus on WARP today, as I've never had much luck with BPR. I will create a small function to calculate the learning curve.</p>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[13]:</div>
+<div class="prompt input_prompt">In [13]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">print_log</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
-    <span class="n">top</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-    <span class="n">middle</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-    <span class="n">bottom</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="s1">''</span>
+    <span class="n">middle</span> <span class="o">=</span> <span class="s1">''</span>
+    <span class="n">bottom</span> <span class="o">=</span> <span class="s1">''</span>
     <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
-        <span class="n">top</span> <span class="o">+=</span> <span class="s1">&#39;+</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="n">top</span> <span class="o">+=</span> <span class="s1">'+</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">'-'</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;| {0:^</span><span class="si">{1}</span><span class="s1">} &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">'| {0:^</span><span class="si">{1}</span><span class="s1">} '</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;| {0:^</span><span class="si">{1}</span><span class="s1">} &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">'| {0:^</span><span class="si">{1}</span><span class="s1">} '</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
         <span class="k">elif</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
               <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
               <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)):</span>
-            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;| {0:^</span><span class="si">{1}</span><span class="s1">.5f} &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
-        <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">&#39;+</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
-    <span class="n">top</span> <span class="o">+=</span> <span class="s1">&#39;+&#39;</span>
-    <span class="n">middle</span> <span class="o">+=</span> <span class="s1">&#39;|&#39;</span>
-    <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">&#39;+&#39;</span>
+            <span class="n">middle</span> <span class="o">+=</span> <span class="s1">'| {0:^</span><span class="si">{1}</span><span class="s1">.5f} '</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">spacing</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">'+</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">'='</span><span class="o">*</span><span class="n">spacing</span><span class="p">)</span>
+    <span class="n">top</span> <span class="o">+=</span> <span class="s1">'+'</span>
+    <span class="n">middle</span> <span class="o">+=</span> <span class="s1">'|'</span>
+    <span class="n">bottom</span> <span class="o">+=</span> <span class="s1">'+'</span>
     <span class="k">if</span> <span class="n">header</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">top</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">middle</span><span class="p">)</span>
@@ -1568,7 +1483,7 @@ Sparsity: 0.140%
     <span class="n">old_epoch</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">train_patk</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">test_patk</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Epoch&#39;</span><span class="p">,</span> <span class="s1">&#39;train p@5&#39;</span><span class="p">,</span> <span class="s1">&#39;test p@5&#39;</span><span class="p">]</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'Epoch'</span><span class="p">,</span> <span class="s1">'train p@5'</span><span class="p">,</span> <span class="s1">'test p@5'</span><span class="p">]</span>
     <span class="n">print_log</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="n">iterarray</span><span class="p">:</span>
         <span class="n">more</span> <span class="o">=</span> <span class="n">epoch</span> <span class="o">-</span> <span class="n">old_epoch</span>
@@ -1584,41 +1499,32 @@ Sparsity: 0.140%
         <span class="n">print_log</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">train_patk</span><span class="p">,</span> <span class="n">test_patk</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="prompt input_prompt">In [14]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;warp&#39;</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">2016</span><span class="p">)</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">'warp'</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">2016</span><span class="p">)</span>
 <span class="c1"># Initialize model.</span>
 <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">0</span><span class="p">);</span>
 
 <span class="n">iterarray</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">110</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
 
 <span class="n">model</span><span class="p">,</span> <span class="n">train_patk</span><span class="p">,</span> <span class="n">test_patk</span> <span class="o">=</span> <span class="n">patk_learning_curve</span><span class="p">(</span>
-    <span class="n">model</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">eval_train</span><span class="p">,</span> <span class="n">iterarray</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s1">&#39;num_threads&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">}</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">eval_train</span><span class="p">,</span> <span class="n">iterarray</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s1">'num_threads'</span><span class="p">:</span> <span class="mi">4</span><span class="p">}</span>
 <span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>+------------+------------+------------+
 |   Epoch    | train p@5  |  test p@5  |
@@ -1646,25 +1552,23 @@ Sparsity: 0.140%
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="prompt input_prompt">In [15]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
-<span class="n">sns</span><span class="o">.</span><span class="n">set_style</span><span class="p">(</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_style</span><span class="p">(</span><span class="s1">'white'</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">plot_patk</span><span class="p">(</span><span class="n">iterarray</span><span class="p">,</span> <span class="n">patk</span><span class="p">,</span>
               <span class="n">title</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">iterarray</span><span class="p">,</span> <span class="n">patk</span><span class="p">);</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">);</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Epochs&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;p@</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">'Epochs'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">'p@</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">24</span><span class="p">);</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">);</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">);</span>
 
@@ -1673,33 +1577,24 @@ Sparsity: 0.140%
 <span class="n">fig</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_figure</span><span class="p">();</span>
 <span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">(</span><span class="n">fig</span><span class="p">);</span>
 <span class="n">plot_patk</span><span class="p">(</span><span class="n">iterarray</span><span class="p">,</span> <span class="n">train_patk</span><span class="p">,</span>
-         <span class="s1">&#39;Train&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+         <span class="s1">'Train'</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 
 <span class="c1"># Plot test on right</span>
 <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 <span class="n">fig</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_figure</span><span class="p">();</span>
 <span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">(</span><span class="n">fig</span><span class="p">);</span>
 <span class="n">plot_patk</span><span class="p">(</span><span class="n">iterarray</span><span class="p">,</span> <span class="n">test_patk</span><span class="p">,</span>
-         <span class="s1">&#39;Test&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+         <span class="s1">'Test'</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">();</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
-
 <div class="output_png output_subarea ">
 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjMAAAGACAYAAABY5OOEAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
 AAALEgAACxIB0t1+/AAAIABJREFUeJzs3XlcVPX6wPHPsKqg6OACpqDgwqJgioYKipjmHppbZv5u
@@ -2296,45 +2191,38 @@ E6NGjcKePXtw7NgxXL9+HX369EFUVBSefPJJrUWubry3tu69yfz58+Hj44O9e/ciKysLP/74I4QQ
 cHNzQ3h4OP71r3+hf//+On1ORPQHxpk/MM4Yjky0lUoS6aBpA7gRI0Zw9D0RGQXjDLWGY2aIiIio
 U2MyQ0RERJ0akxkiIiLq1JjMkMHIZLI2B8AREXUE4wy1hAOAiYiIqFNjzwwRERF1akxmiIiIqFNj
 MkNERESdGpMZIiIi6tSYzBAREVGnxmSGiIiIOrX/D0IM9D8r6P4kAAAAAElFTkSuQmCC
-"
->
-</div>
-
-</div>
-
+"/>
 </div>
 </div>
-
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Optimizing-Hyperparameters-with-scikit-optimize">Optimizing Hyperparameters with <code>scikit-optimize</code><a class="anchor-link" href="#Optimizing-Hyperparameters-with-scikit-optimize">&#182;</a></h2><p>Now that we have a baseline, we would like to find optimal hyperparameters to maximize our p@k. On a side note, I'm not sure if precision at k is the best metric to be using here when all of our interactions are binary, but let's just ignore that for now...</p>
+<h2 id="Optimizing-Hyperparameters-with-scikit-optimize">Optimizing Hyperparameters with <code>scikit-optimize</code><a class="anchor-link" href="#Optimizing-Hyperparameters-with-scikit-optimize">¶</a></h2><p>Now that we have a baseline, we would like to find optimal hyperparameters to maximize our p@k. On a side note, I'm not sure if precision at k is the best metric to be using here when all of our interactions are binary, but let's just ignore that for now...</p>
 <p>Last post I ran a grid search over a bunch of hyperparameters, and it took forever. It's been shown that a randomized search is better than explicit grid search, but we can do even better. Using the <a href="https://scikit-optimize.github.io/">scikit-optimize</a> (<code>skopt</code>) library, we can treat the hyperpameters as free parameters to search over while using a black box optimization algorithm to maximize p@k. There are a number of optimization algorithms to pick from, but I'll just stick with <code>forest_minimize</code> today.</p>
 <p>The setup is pretty simple. You must first define an objective function that you want to minimize. The objective receives the parameters that you want to solve for as the arguments and returns the objective value at those parameters. Thus, for our case, we pass in the hyperparameters, we train the <code>LightFM</code> model with those parameters, and then return the p@k evaluated after training. Importantly, we must return the negative of the p@k because the objective must be <em>minimized</em>, so maximizing p@k is the same as minimizing the negative of the p@k. The last thing to note is that one must make liberal use of global variables because one can only pass hyperparameters to the objective function.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="prompt input_prompt">In [16]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">skopt</span> <span class="k">import</span> <span class="n">forest_minimize</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[17]:</div>
+<div class="prompt input_prompt">In [17]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">objective</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
     <span class="c1"># unpack</span>
     <span class="n">epochs</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span>\
@@ -2342,7 +2230,7 @@ MkNERESdGpMZIiIi6tSYzBAREVGnxmSGiIiIOrX/D0IM9D8r6P4kAAAAAElFTkSuQmCC
     
     <span class="n">user_alpha</span> <span class="o">=</span> <span class="n">alpha</span>
     <span class="n">item_alpha</span> <span class="o">=</span> <span class="n">alpha</span>
-    <span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;warp&#39;</span><span class="p">,</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">'warp'</span><span class="p">,</span>
                     <span class="n">random_state</span><span class="o">=</span><span class="mi">2016</span><span class="p">,</span>
                     <span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
                     <span class="n">no_components</span><span class="o">=</span><span class="n">no_components</span><span class="p">,</span>
@@ -2358,72 +2246,60 @@ MkNERESdGpMZIiIi6tSYzBAREVGnxmSGiIiIOrX/D0IM9D8r6P4kAAAAAElFTkSuQmCC
     <span class="c1"># Make negative because we want to _minimize_ objective</span>
     <span class="n">out</span> <span class="o">=</span> <span class="o">-</span><span class="n">mapatk</span>
     <span class="c1"># Handle some weird numerical shit going on</span>
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">out</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.01</span> <span class="ow">or</span> <span class="n">out</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">out</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o"><</span> <span class="mf">0.01</span> <span class="ow">or</span> <span class="n">out</span> <span class="o"><</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">:</span>
         <span class="k">return</span> <span class="mf">0.0</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">out</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>With the objective function defined, we can define ranges for our hyperparameters. These can either be simple max and mins or we can assume a distribution like below. With the ranges defined, we simple call <code>forest_minimize</code> and wait a pretty long time.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[18]:</div>
+<div class="prompt input_prompt">In [18]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">space</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">260</span><span class="p">),</span> <span class="c1"># epochs</span>
-         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">4</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">),</span> <span class="c1"># learning_rate</span>
+         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">4</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s1">'log-uniform'</span><span class="p">),</span> <span class="c1"># learning_rate</span>
          <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span> <span class="c1"># no_components</span>
-         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">),</span> <span class="c1"># alpha</span>
+         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">'log-uniform'</span><span class="p">),</span> <span class="c1"># alpha</span>
         <span class="p">]</span>
 
 <span class="n">res_fm</span> <span class="o">=</span> <span class="n">forest_minimize</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">space</span><span class="p">,</span> <span class="n">n_calls</span><span class="o">=</span><span class="mi">250</span><span class="p">,</span>
                      <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                      <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[19]:</div>
+<div class="prompt input_prompt">In [19]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Maximimum p@k found: </span><span class="si">{:6.5f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">-</span><span class="n">res_fm</span><span class="o">.</span><span class="n">fun</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Optimal parameters:&#39;</span><span class="p">)</span>
-<span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;epochs&#39;</span><span class="p">,</span> <span class="s1">&#39;learning_rate&#39;</span><span class="p">,</span> <span class="s1">&#39;no_components&#39;</span><span class="p">,</span> <span class="s1">&#39;alpha&#39;</span><span class="p">]</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">'Maximimum p@k found: </span><span class="si">{:6.5f}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">-</span><span class="n">res_fm</span><span class="o">.</span><span class="n">fun</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Optimal parameters:'</span><span class="p">)</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'epochs'</span><span class="p">,</span> <span class="s1">'learning_rate'</span><span class="p">,</span> <span class="s1">'no_components'</span><span class="p">,</span> <span class="s1">'alpha'</span><span class="p">]</span>
 <span class="k">for</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">res_fm</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Maximimum p@k found: 0.04781
 Optimal parameters:
@@ -2434,51 +2310,45 @@ alpha: 0.00023540795300720628
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>No too shabby! We started with a p@k of ~0.034 with base hyperparameters, and then increased it to 0.0478 by finding better ones. Let's see what happens if we add in our item features as side information to the matrix factorization model.</p>
-<h2 id="Learning-to-Rank-+-Side-Information">Learning to Rank + Side Information<a class="anchor-link" href="#Learning-to-Rank-+-Side-Information">&#182;</a></h2><p><code>LightFM</code> makes certain subtle assumptions when you do or do not pass side information. When no <code>user_features</code> or <code>item_features</code> are explicitly included, then <code>LightFM</code> assumes that both feature matrices are in fact identity matrices of size (<code>num_users</code> X <code>num_users</code>) or (<code>num_items</code> X <code>num_items</code>) for user and item feature matrices, respectively. What this is effectively doing is one-hot-encoding each user and item ID as a single feature vector. In the case where you do pass an <code>item_features</code> matrix, then <code>LightFM</code> does not do any one-hot-encoding. Thus, each user and item ID does not get its own vector unless you explicitly define one. The easiest way to do this is to make your own identity matrix and stack it on the side of the <code>item_features</code> matrix that we already created. This way, each item is described by a single vector for its unique ID and then a set of vectors for each of its tags.</p>
-
+<h2 id="Learning-to-Rank-+-Side-Information">Learning to Rank + Side Information<a class="anchor-link" href="#Learning-to-Rank-+-Side-Information">¶</a></h2><p><code>LightFM</code> makes certain subtle assumptions when you do or do not pass side information. When no <code>user_features</code> or <code>item_features</code> are explicitly included, then <code>LightFM</code> assumes that both feature matrices are in fact identity matrices of size (<code>num_users</code> X <code>num_users</code>) or (<code>num_items</code> X <code>num_items</code>) for user and item feature matrices, respectively. What this is effectively doing is one-hot-encoding each user and item ID as a single feature vector. In the case where you do pass an <code>item_features</code> matrix, then <code>LightFM</code> does not do any one-hot-encoding. Thus, each user and item ID does not get its own vector unless you explicitly define one. The easiest way to do this is to make your own identity matrix and stack it on the side of the <code>item_features</code> matrix that we already created. This way, each item is described by a single vector for its unique ID and then a set of vectors for each of its tags.</p>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[20]:</div>
+<div class="prompt input_prompt">In [20]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Need to hstack item_features</span>
 <span class="n">eye</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">item_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">item_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
 <span class="n">item_features_concat</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">eye</span><span class="p">,</span> <span class="n">item_features</span><span class="p">))</span>
 <span class="n">item_features_concat</span> <span class="o">=</span> <span class="n">item_features_concat</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>We now need to define a new objective function that incorporates the <code>item_features</code>.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[21]:</div>
+<div class="prompt input_prompt">In [21]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">objective_wsideinfo</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
     <span class="c1"># unpack</span>
     <span class="n">epochs</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span>\
@@ -2486,7 +2356,7 @@ alpha: 0.00023540795300720628
     <span class="n">scale</span> <span class="o">=</span> <span class="n">params</span>
     
     <span class="n">user_alpha</span> <span class="o">=</span> <span class="n">item_alpha</span> <span class="o">*</span> <span class="n">scale</span>
-    <span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;warp&#39;</span><span class="p">,</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">'warp'</span><span class="p">,</span>
                     <span class="n">random_state</span><span class="o">=</span><span class="mi">2016</span><span class="p">,</span>
                     <span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
                     <span class="n">no_components</span><span class="o">=</span><span class="n">no_components</span><span class="p">,</span>
@@ -2504,36 +2374,33 @@ alpha: 0.00023540795300720628
     <span class="c1"># Make negative because we want to _minimize_ objective</span>
     <span class="n">out</span> <span class="o">=</span> <span class="o">-</span><span class="n">mapatk</span>
     <span class="c1"># Weird shit going on</span>
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">out</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.01</span> <span class="ow">or</span> <span class="n">out</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">out</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o"><</span> <span class="mf">0.01</span> <span class="ow">or</span> <span class="n">out</span> <span class="o"><</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">:</span>
         <span class="k">return</span> <span class="mf">0.0</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">out</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>With that defined, let's now run a new hyperparameter search. I will add an extra scaling parameter which will control the scaling between the user and item item regularization (alpha) terms. Because of all of the extra item features, we may want to regularize things differently. We'll also input an <code>x0</code> term to <code>forest_minimization</code> which will allow us to start our hyperparameter search at the optimal parameters from the previous run without side information.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[22]:</div>
+<div class="prompt input_prompt">In [22]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">space</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">260</span><span class="p">),</span> <span class="c1"># epochs</span>
-         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">),</span> <span class="c1"># learning_rate</span>
+         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s1">'log-uniform'</span><span class="p">),</span> <span class="c1"># learning_rate</span>
          <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span> <span class="c1"># no_components</span>
-         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">),</span> <span class="c1"># item_alpha</span>
-         <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="s1">&#39;log-uniform&#39;</span><span class="p">)</span> <span class="c1"># user_scaling</span>
+         <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">3</span><span class="p">,</span> <span class="s1">'log-uniform'</span><span class="p">),</span> <span class="c1"># item_alpha</span>
+         <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="s1">'log-uniform'</span><span class="p">)</span> <span class="c1"># user_scaling</span>
         <span class="p">]</span>
 <span class="n">x0</span> <span class="o">=</span> <span class="n">res_fm</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">1.</span><span class="p">)</span>
 <span class="c1"># This typecast is required</span>
@@ -2543,37 +2410,28 @@ alpha: 0.00023540795300720628
                                   <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                                   <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="prompt input_prompt">In [23]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Maximimum p@k found: </span><span class="si">{:6.5f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">-</span><span class="n">res_fm_itemfeat</span><span class="o">.</span><span class="n">fun</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Optimal parameters:&#39;</span><span class="p">)</span>
-<span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;epochs&#39;</span><span class="p">,</span> <span class="s1">&#39;learning_rate&#39;</span><span class="p">,</span> <span class="s1">&#39;no_components&#39;</span><span class="p">,</span> <span class="s1">&#39;item_alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;scaling&#39;</span><span class="p">]</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">'Maximimum p@k found: </span><span class="si">{:6.5f}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">-</span><span class="n">res_fm_itemfeat</span><span class="o">.</span><span class="n">fun</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Optimal parameters:'</span><span class="p">)</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'epochs'</span><span class="p">,</span> <span class="s1">'learning_rate'</span><span class="p">,</span> <span class="s1">'no_components'</span><span class="p">,</span> <span class="s1">'item_alpha'</span><span class="p">,</span> <span class="s1">'scaling'</span><span class="p">]</span>
 <span class="k">for</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">res_fm_itemfeat</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x_</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Maximimum p@k found: 0.04610
 Optimal parameters:
@@ -2585,10 +2443,8 @@ scaling: 0.6960826359109953
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
@@ -2596,22 +2452,21 @@ scaling: 0.6960826359109953
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Now, you might be thinking "Ethan, we went through all that only to get <em>worse</em> p@k?!", and, frankly, I share your frustration. I've actually seen this happen before - adding side information will sometimes reduce or at least not increase whatever metric you're looking for. In all fairness, I only ran the above optimization for 50 calls, as opposed to the original one with 250 calls. This was mainly due to the matrix factorization model running much slower due to scaling with the number of user and item features.</p>
 <p>Even so, there are other reasons that the results could be worse. Maybe user behavior is a much better signal than human-defined tags and categories. The tag information could be poor for some of the models. As well, one may need to scale the tags <em>differently</em> compared to the unique ID vectors using, say, separate regularization terms, in order to get better behavior. Maybe one should normalize the tag weights by the number of tags. Maybe tags should not be included unless they have been used on at least <code>X</code> models. Maybe tags should only be included on models with few user interactions because after that ponit the cold start problem is sufficiently null. Who knows?! These are experiments I'd love to run, but I'd be happy to hear from others' experience.</p>
-<h2 id="Fun-with-Feature-Embeddings">Fun with Feature Embeddings<a class="anchor-link" href="#Fun-with-Feature-Embeddings">&#182;</a></h2><p>Regardless of all of this, there is still a benefit to incorporating the item features. Because they have vectors embedded in the same space as the users and items, we can play with different types of recommendations. We'll first retrain the model on the full dataset using the optimal parameters.</p>
-
+<h2 id="Fun-with-Feature-Embeddings">Fun with Feature Embeddings<a class="anchor-link" href="#Fun-with-Feature-Embeddings">¶</a></h2><p>Regardless of all of this, there is still a benefit to incorporating the item features. Because they have vectors embedded in the same space as the users and items, we can play with different types of recommendations. We'll first retrain the model on the full dataset using the optimal parameters.</p>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[24]:</div>
+<div class="prompt input_prompt">In [24]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">epochs</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span>\
 <span class="n">no_components</span><span class="p">,</span> <span class="n">item_alpha</span><span class="p">,</span>\
 <span class="n">scale</span> <span class="o">=</span> <span class="n">res_fm_itemfeat</span><span class="o">.</span><span class="n">x</span>
 
 <span class="n">user_alpha</span> <span class="o">=</span> <span class="n">item_alpha</span> <span class="o">*</span> <span class="n">scale</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;warp&#39;</span><span class="p">,</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">LightFM</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">'warp'</span><span class="p">,</span>
                 <span class="n">random_state</span><span class="o">=</span><span class="mi">2016</span><span class="p">,</span>
                 <span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
                 <span class="n">no_components</span><span class="o">=</span><span class="n">no_components</span><span class="p">,</span>
@@ -2621,49 +2476,43 @@ scaling: 0.6960826359109953
           <span class="n">item_features</span><span class="o">=</span><span class="n">item_features_concat</span><span class="p">,</span>
           <span class="n">num_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Feature-Sorting">Feature Sorting<a class="anchor-link" href="#Feature-Sorting">&#182;</a></h3><p>Imagine you're on Sketchfab and click the tag <a href="https://sketchfab.com/tags/tiltbrush">tiltbrush</a> which would presumably correspond to models created with Google's <a href="https://www.tiltbrush.com/">Tilt Brush</a> VR appliction. How should Sketchfab return the results to you? They currently return results based on the popularity of the items which is presumably not connected to the "tiltbrushiness" of the models. With the factorized tags, we can now return a list of products that are <em>most similar</em> to the tiltbrush tag sorted by that similarity. To do this, we must find the tiltbrush vector and measure the cosine similarity to every product.</p>
+<h3 id="Feature-Sorting">Feature Sorting<a class="anchor-link" href="#Feature-Sorting">¶</a></h3><p>Imagine you're on Sketchfab and click the tag <a href="https://sketchfab.com/tags/tiltbrush">tiltbrush</a> which would presumably correspond to models created with Google's <a href="https://www.tiltbrush.com/">Tilt Brush</a> VR appliction. How should Sketchfab return the results to you? They currently return results based on the popularity of the items which is presumably not connected to the "tiltbrushiness" of the models. With the factorized tags, we can now return a list of products that are <em>most similar</em> to the tiltbrush tag sorted by that similarity. To do this, we must find the tiltbrush vector and measure the cosine similarity to every product.</p>
 <p>Recall that we tacked our identity matrix onto the left-hand side of the item_features matrix. This means that our <code>DictVectorizer</code>, which mapped our item features to column indices of our <code>item_features</code> matrix, will have indices that are off by the number of items.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[25]:</div>
+<div class="prompt input_prompt">In [25]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">idx</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">vocabulary_</span><span class="p">[</span><span class="s1">&#39;tag_tiltbrush&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">item_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">idx</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">vocabulary_</span><span class="p">[</span><span class="s1">'tag_tiltbrush'</span><span class="p">]</span> <span class="o">+</span> <span class="n">item_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Next, we need to calculate the cosine similarity between the tiltbrush vector and all other item <em>representations</em> where each item's representation is the sum of its feature vectors. These feature vectors are stored as <code>item_embeddings</code> in the LightFM model. (<em>Note: there are technically bias terms in the LightFM model that we are simply ignoring for now</em>).</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[26]:</div>
+<div class="prompt input_prompt">In [26]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">cosine_similarity</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">mat</span><span class="p">):</span>
     <span class="n">sim</span> <span class="o">=</span> <span class="n">vec</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">mat</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
     <span class="n">matnorm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -2674,104 +2523,86 @@ scaling: 0.6960826359109953
 <span class="n">item_representations</span> <span class="o">=</span> <span class="n">item_features_concat</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">item_embeddings</span><span class="p">)</span>
 <span class="n">sims</span> <span class="o">=</span> <span class="n">cosine_similarity</span><span class="p">(</span><span class="n">tilt_vec</span><span class="p">,</span> <span class="n">item_representations</span><span class="p">)</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Lastly, we can repurpose some code from the last blog post to visualize the top 5 Sketchfab model thumbnails that are most similar to the tiltbrush vector.</p>
-
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[27]:</div>
+<div class="prompt input_prompt">In [27]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">requests</span>
 <span class="k">def</span> <span class="nf">get_thumbnails</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">idx_to_mid</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
     <span class="n">thumbs</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">mids</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">row</span><span class="p">)[:</span><span class="n">N</span><span class="p">]:</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://sketchfab.com/i/models/</span><span class="si">{}</span><span class="s1">&#39;</span>\
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'https://sketchfab.com/i/models/</span><span class="si">{}</span><span class="s1">'</span>\
                                 <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_to_mid</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-        <span class="n">thumb</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;thumbnails&#39;</span><span class="p">][</span><span class="s1">&#39;images&#39;</span><span class="p">]</span>
-                 <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span><span class="o">==</span><span class="mi">200</span><span class="p">]</span>
+        <span class="n">thumb</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">'url'</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s1">'thumbnails'</span><span class="p">][</span><span class="s1">'images'</span><span class="p">]</span>
+                 <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s1">'width'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="s1">'height'</span><span class="p">]</span><span class="o">==</span><span class="mi">200</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">thumb</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;no thumbnail&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">'no thumbnail'</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">thumb</span> <span class="o">=</span> <span class="n">thumb</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">thumbs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thumb</span><span class="p">)</span>
         <span class="n">mids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx_to_mid</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">thumbs</span><span class="p">,</span> <span class="n">mids</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[28]:</div>
+<div class="prompt input_prompt">In [28]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">IPython.display</span> <span class="k">import</span> <span class="n">display</span><span class="p">,</span> <span class="n">HTML</span>
 
 <span class="k">def</span> <span class="nf">display_thumbs</span><span class="p">(</span><span class="n">thumbs</span><span class="p">,</span> <span class="n">mids</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
-    <span class="n">thumb_html</span> <span class="o">=</span> <span class="s2">&quot;&lt;a href=&#39;</span><span class="si">{}</span><span class="s2">&#39; target=&#39;_blank&#39;&gt;</span><span class="se">\</span>
-<span class="s2">                  &lt;img style=&#39;width: 160px; margin: 0px; </span><span class="se">\</span>
-<span class="s2">                  float: left; border: 1px solid black;&#39; </span><span class="se">\</span>
-<span class="s2">                  src=&#39;</span><span class="si">{}</span><span class="s2">&#39; /&gt;&lt;/a&gt;&quot;</span>
-    <span class="n">images</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">thumb_html</span> <span class="o">=</span> <span class="s2">"<a href='</span><span class="si">{}</span><span class="s2">' target='_blank'></span><span class="se">\</span>
+<span class="s2">                  <img style='width: 160px; margin: 0px; </span><span class="se">\</span>
+<span class="s2">                  float: left; border: 1px solid black;' </span><span class="se">\</span>
+<span class="s2">                  src='</span><span class="si">{}</span><span class="s2">' /></a>"</span>
+    <span class="n">images</span> <span class="o">=</span> <span class="s1">''</span>
     <span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">mid</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">thumbs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">N</span><span class="p">],</span> <span class="n">mids</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">N</span><span class="p">]):</span>
-        <span class="n">link</span> <span class="o">=</span> <span class="s1">&#39;http://sketchfab.com/models/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span>
+        <span class="n">link</span> <span class="o">=</span> <span class="s1">'http://sketchfab.com/models/</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span>
         <span class="n">images</span> <span class="o">+=</span> <span class="n">thumb_html</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">link</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
     <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">images</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[29]:</div>
+<div class="prompt input_prompt">In [29]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">display_thumbs</span><span class="p">(</span><span class="o">*</span><span class="n">get_thumbnails</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">idx_to_mid</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<a href='http://sketchfab.com/models/62d12cbb47df40d2bb40e8f66012cc09' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/62d12cbb47df40d2bb40e8f66012cc09/dist/thumbnails/a5f50c4a3fea457ba69e988557d7786f/200x200.jpeg' /></a><a href='http://sketchfab.com/models/f09ebdff0e9d40379979c45e721d72c4' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/f09ebdff0e9d40379979c45e721d72c4/dist/thumbnails/3189939b3a6b4a8ca09e2e9add51996a/200x200.jpeg' /></a><a href='http://sketchfab.com/models/62415539695042b48ad62675bff74105' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/62415539695042b48ad62675bff74105/dist/thumbnails/0714f92895754617b20ce2f3539422ba/200x200.jpeg' /></a><a href='http://sketchfab.com/models/a28b3a0fa83443df97c98068f23d62e8' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/a28b3a0fa83443df97c98068f23d62e8/dist/thumbnails/cea404d90af94b70a68da475ed09fe82/200x200.jpeg' /></a><a href='http://sketchfab.com/models/b27ee46609814315b207bca92ffc767b' target='_blank'>                  <img style='width: 160px; margin: 0px;                   float: left; border: 1px solid black;'                   src='https://dg5bepmjyhz9h.cloudfront.net/urls/b27ee46609814315b207bca92ffc767b/dist/thumbnails/62b6fb7095384266a8321dcf7bc17d18/200x200.jpeg' /></a>
-</div>
-
-</div>
-
+<a href="http://sketchfab.com/models/62d12cbb47df40d2bb40e8f66012cc09" target="_blank"> <img src="https://dg5bepmjyhz9h.cloudfront.net/urls/62d12cbb47df40d2bb40e8f66012cc09/dist/thumbnails/a5f50c4a3fea457ba69e988557d7786f/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/></a><a href="http://sketchfab.com/models/f09ebdff0e9d40379979c45e721d72c4" target="_blank"> <img src="https://dg5bepmjyhz9h.cloudfront.net/urls/f09ebdff0e9d40379979c45e721d72c4/dist/thumbnails/3189939b3a6b4a8ca09e2e9add51996a/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/></a><a href="http://sketchfab.com/models/62415539695042b48ad62675bff74105" target="_blank"> <img src="https://dg5bepmjyhz9h.cloudfront.net/urls/62415539695042b48ad62675bff74105/dist/thumbnails/0714f92895754617b20ce2f3539422ba/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/></a><a href="http://sketchfab.com/models/a28b3a0fa83443df97c98068f23d62e8" target="_blank"> <img src="https://dg5bepmjyhz9h.cloudfront.net/urls/a28b3a0fa83443df97c98068f23d62e8/dist/thumbnails/cea404d90af94b70a68da475ed09fe82/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/></a><a href="http://sketchfab.com/models/b27ee46609814315b207bca92ffc767b" target="_blank"> <img src="https://dg5bepmjyhz9h.cloudfront.net/urls/b27ee46609814315b207bca92ffc767b/dist/thumbnails/62b6fb7095384266a8321dcf7bc17d18/200x200.jpeg" style="width: 160px; margin: 0px;                   float: left; border: 1px solid black;"/></a>
 </div>
 </div>
-
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
@@ -2779,91 +2610,75 @@ scaling: 0.6960826359109953
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Pretty cool! Looks like each of these are made with Tiltbrush. Feel free to click the above images to check out each model on the Sketchfab website.</p>
 <p>What else can we do?</p>
-<h3 id="Tag-Suggestions">Tag Suggestions<a class="anchor-link" href="#Tag-Suggestions">&#182;</a></h3><p>Let's say that Sketchfab would like to encourage people to use more tags. This is advantageous to the company because it get users to create structured data for them for free while engaging the user. Sketchfab could encourage this behavior by suggesting tags to go with an image. One way we could do this would be to take a model and suggest tags to go with it that are not currently there. This involves finding tag vectors that are most similar to the model and then filtering tags that are already present.</p>
-
+<h3 id="Tag-Suggestions">Tag Suggestions<a class="anchor-link" href="#Tag-Suggestions">¶</a></h3><p>Let's say that Sketchfab would like to encourage people to use more tags. This is advantageous to the company because it get users to create structured data for them for free while engaging the user. Sketchfab could encourage this behavior by suggesting tags to go with an image. One way we could do this would be to take a model and suggest tags to go with it that are not currently there. This involves finding tag vectors that are most similar to the model and then filtering tags that are already present.</p>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[30]:</div>
+<div class="prompt input_prompt">In [30]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">idx</span> <span class="o">=</span> <span class="mi">900</span>
 <span class="n">mid</span> <span class="o">=</span> <span class="n">idx_to_mid</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
 <span class="k">def</span> <span class="nf">display_single</span><span class="p">(</span><span class="n">mid</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Display thumbnail for a single model&quot;&quot;&quot;</span>
-    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://sketchfab.com/i/models/</span><span class="si">{}</span><span class="s1">&#39;</span>\
+    <span class="sd">"""Display thumbnail for a single model"""</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'https://sketchfab.com/i/models/</span><span class="si">{}</span><span class="s1">'</span>\
                             <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mid</span><span class="p">))</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-    <span class="n">thumb</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;thumbnails&#39;</span><span class="p">][</span><span class="s1">&#39;images&#39;</span><span class="p">]</span>
-             <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span><span class="o">==</span><span class="mi">200</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">thumb_html</span> <span class="o">=</span> <span class="s2">&quot;&lt;a href=&#39;</span><span class="si">{}</span><span class="s2">&#39; target=&#39;_blank&#39;&gt;</span><span class="se">\</span>
-<span class="s2">                  &lt;img style=&#39;width: 200px; margin: 0px; </span><span class="se">\</span>
-<span class="s2">                  float: left; border: 1px solid black;&#39; </span><span class="se">\</span>
-<span class="s2">                  src=&#39;</span><span class="si">{}</span><span class="s2">&#39; /&gt;&lt;/a&gt;&quot;</span>
-    <span class="n">link</span> <span class="o">=</span> <span class="s1">&#39;http://sketchfab.com/models/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span>
+    <span class="n">thumb</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="s1">'url'</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s1">'thumbnails'</span><span class="p">][</span><span class="s1">'images'</span><span class="p">]</span>
+             <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s1">'width'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">200</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="s1">'height'</span><span class="p">]</span><span class="o">==</span><span class="mi">200</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">thumb_html</span> <span class="o">=</span> <span class="s2">"<a href='</span><span class="si">{}</span><span class="s2">' target='_blank'></span><span class="se">\</span>
+<span class="s2">                  <img style='width: 200px; margin: 0px; </span><span class="se">\</span>
+<span class="s2">                  float: left; border: 1px solid black;' </span><span class="se">\</span>
+<span class="s2">                  src='</span><span class="si">{}</span><span class="s2">' /></a>"</span>
+    <span class="n">link</span> <span class="o">=</span> <span class="s1">'http://sketchfab.com/models/</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span>
     <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">thumb_html</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">link</span><span class="p">,</span> <span class="n">thumb</span><span class="p">)))</span>
 
 <span class="n">display_single</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span>
 
 <span class="c1"># Make mapper to map from from feature index to feature name</span>
 <span class="n">idx_to_feat</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dv</span><span class="o">.</span><span class="n">vocabulary_</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Tags:&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Tags:'</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">item_features</span><span class="o">.</span><span class="n">getrow</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;- </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_to_feat</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'- </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_to_feat</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
-
 <div class="output_html rendered_html output_subarea ">
-<a href='http://sketchfab.com/models/381cbf8a06f042b9b41932f1f7ada997' target='_blank'><img style='width: 200px; margin: 0px;               float: left; border: 1px solid black;' src='https://dg5bepmjyhz9h.cloudfront.net/urls/381cbf8a06f042b9b41932f1f7ada997/dist/thumbnails/5b486753baca47e9ad175a279a61eb11/200x200.jpeg' /></a>
+<a href="http://sketchfab.com/models/381cbf8a06f042b9b41932f1f7ada997" target="_blank"><img src="https://dg5bepmjyhz9h.cloudfront.net/urls/381cbf8a06f042b9b41932f1f7ada997/dist/thumbnails/5b486753baca47e9ad175a279a61eb11/200x200.jpeg" style="width: 200px; margin: 0px;               float: left; border: 1px solid black;"/></a>
 </div>
-
 </div>
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Tags:
 - category_architecture
 - category_characters
 - category_cultural heritage
-- category_products &amp; technology
-- category_science, nature &amp; education
+- category_products & technology
+- category_science, nature & education
 - tag_rock
 - tag_sculpture
 - tag_woman
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[31]:</div>
+<div class="prompt input_prompt">In [31]:</div>
 <div class="inner_cell">
-    <div class="input_area">
+<div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Indices of all tag vectors</span>
 <span class="n">tag_indices</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">v</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dv</span><span class="o">.</span><span class="n">vocabulary_</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                  <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;tag_&#39;</span><span class="p">))</span>
+                  <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">'tag_'</span><span class="p">))</span>
 <span class="c1"># Tags that are already present</span>
 <span class="n">filter_tags</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">item_features</span><span class="o">.</span><span class="n">getrow</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
 
@@ -2874,30 +2689,23 @@ scaling: 0.6960826359109953
 <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="n">recs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">sims</span><span class="p">)</span>
 <span class="n">n_items</span> <span class="o">=</span> <span class="n">item_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">suggested_tags</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+<span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">suggested_tags</span><span class="p">)</span> <span class="o"><</span> <span class="mi">10</span><span class="p">:</span>
     <span class="n">offset_idx</span> <span class="o">=</span> <span class="n">recs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">n_items</span>
     <span class="k">if</span> <span class="n">offset_idx</span> <span class="ow">in</span> <span class="n">tag_indices</span>\
        <span class="ow">and</span> <span class="n">offset_idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">filter_tags</span><span class="p">:</span>
         <span class="n">suggested_tags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx_to_feat</span><span class="p">[</span><span class="n">offset_idx</span><span class="p">])</span>
     <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Suggested Tags:&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Suggested Tags:'</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">suggested_tags</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;- </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'- </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
 </pre></div>
-
 </div>
 </div>
 </div>
-
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
 <div class="prompt"></div>
-
-
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Suggested Tags:
 - tag_greek
@@ -2913,22 +2721,17 @@ scaling: 0.6960826359109953
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Quick-conclusion">Quick conclusion<a class="anchor-link" href="#Quick-conclusion">&#182;</a></h2><p>So this post was long. There was a lot to learn and a lot of parameters to optimize. I'd like to note that, in terms of out of the box performance, it's hard to beat the ALS model from last post. There's fewer parameters to optimize, and the model is much more "forgiving" of being a bit off in your hyperparameters. Contrastingly, if your learning rate is poor, then SGD will give you <em>nothing</em> in return. It is definitely possible to beat ALS in performance, though, if you spend enough time fiddling around. Moreover, the ability to incorporate side information is important for being able to make new types of recommendations and overcome the cold start problem, so it's good to have this in your toolbox.</p>
-
+<h2 id="Quick-conclusion">Quick conclusion<a class="anchor-link" href="#Quick-conclusion">¶</a></h2><p>So this post was long. There was a lot to learn and a lot of parameters to optimize. I'd like to note that, in terms of out of the box performance, it's hard to beat the ALS model from last post. There's fewer parameters to optimize, and the model is much more "forgiving" of being a bit off in your hyperparameters. Contrastingly, if your learning rate is poor, then SGD will give you <em>nothing</em> in return. It is definitely possible to beat ALS in performance, though, if you spend enough time fiddling around. Moreover, the ability to incorporate side information is important for being able to make new types of recommendations and overcome the cold start problem, so it's good to have this in your toolbox.</p>
 </div>
 </div>
 </div>
- 
-
 
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var mathjaxscript = document.createElement('script');
