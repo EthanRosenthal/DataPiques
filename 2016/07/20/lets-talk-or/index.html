@@ -1018,7 +1018,9 @@ h6:hover .anchor-link {
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 
+
 <p>You've studied machine learning, you're a dataframe master for massaging data, and you can easily pipe that data through a bunch of machine learning libraries.</p>
+
 
 <p>You go for a job interview at a SAAS company, you're given some raw data and labels and asked to predict churn, and come on - are these guys even trying? You generate the shit out of some features, you overfit the hell out of that multidimensional manifold just so you can back off and show off your knowledge of regularization, and then you put the icing on the cake by cross validating towards a better metric for the business problem than simple accuracy.</p>
 <p>Next.</p>
@@ -1030,320 +1032,379 @@ h6:hover .anchor-link {
 <p>And so you write a program to enumerate all possible combinations of dog collar quantities along with the associated profit, and you find the maximum of the list of answers. Your uncle's happy, but you feel like an idiot because you know that this isn't scalable and god help you if you're ever asked this in an interview and there's just <em>got</em> to be a better way, right?</p>
 <p>Well, there's a better way.</p>
 <p>There's a better way! And I feel like nobody talks about it because the Data's not Big, you're not Learning Deep things, and there's nary a chatbot in sight. It's boring, old operations research which was something that I guess your university offered but nobody really knew what it meant. Full disclosure: I still don't really know what it means. I <em>do</em> know that the job of the data scientist is to bring value to the company, and having some operations and optimization in your toolbelt is quite valuable!</p>
-<h2 id="Problem-formulation">Problem formulation<a class="anchor-link" href="#Problem-formulation">¶</a></h2><p>Let's try to solve Uncle's problem to get a feel for how we think about these things. I am not going to in any way cover how programs actually solve these problems (because I still don't know) but instead how one sets up this problem and asks a solver to solve this in Python.</p>
+<h2 id="Problem-formulation">Problem formulation<a class="anchor-link" href="#Problem-formulation">&#182;</a></h2><p>Let's try to solve Uncle's problem to get a feel for how we think about these things. I am not going to in any way cover how programs actually solve these problems (because I still don't know) but instead how one sets up this problem and asks a solver to solve this in Python.</p>
 <p>What was the original question? "How many of each collar should we build to maximize profit?" Maximize profit is the key phrase here. The way to think of optimization problems like this are in terms of the objective function and the constraints. We want to maximize profit, so our objective function will be the total profit from all collars produced (assuming all get sold). If we say that we have a variable, $c_{j}$, which says how many of collar $j$ we will produce, and $p_{j}$ is a constant denoting the profit that we will make on that collar, then our objective function is simply</p>
-$$\sum\limits_{j}p_{j}c_{j}$$<p>We want to maximize this function subject to specific constraints. One constraint is that we only have a 10K budget. The simplest method of solving these types of problems is to keep all constraints linear. If we have a known constant $w_{j}$ which is the cost in dollars of producing collar $j$, then the constraint could be expressed in mathematical form as</p>
-$$\sum\limits_{j}w_{j}c_{j} \leq 10000$$<p>Isn't this fun? All of these optimization problems consist of figuring out how to define your constraints in terms of <em>math</em> which is basically like the ultimate nerd-puzzle. The constraint on figuring out your constraints (see what I did there?) is that you should keep your constraints linear. This can get fairly tricky (read: fun).</p>
+<p>$$\sum\limits_{j}p_{j}c_{j}$$</p>
+<p>We want to maximize this function subject to specific constraints. One constraint is that we only have a 10K budget. The simplest method of solving these types of problems is to keep all constraints linear. If we have a known constant $w_{j}$ which is the cost in dollars of producing collar $j$, then the constraint could be expressed in mathematical form as</p>
+<p>$$\sum\limits_{j}w_{j}c_{j} \leq 10000$$</p>
+<p>Isn't this fun? All of these optimization problems consist of figuring out how to define your constraints in terms of <em>math</em> which is basically like the ultimate nerd-puzzle. The constraint on figuring out your constraints (see what I did there?) is that you should keep your constraints linear. This can get fairly tricky (read: fun).</p>
 <p>Alright, let's figure out the last two constraints, and then we can start coding this thing up. If $r_{j}$ is the minimimum run size for each collar, then this is relatively simple:</p>
-$$\forall\, j,\, c_{j} \geq r_{j} $$<p>By the way, that means "for all $j$, $c_{j}$ is greater than or equal to $r_{j}$". We can lastly deal with the limited "supplies" for building collars by assuming that $m_{i}$ is the max quantity of supply $i$. If each collar $j$ requires $s_{ji}$ quantity of supply $i$, then the limited supplies constraint is written</p>
-$$\forall\, i,\, \sum\limits_{j}s_{ij} \leq m_{i}$$<h2 id="Math-$\Rightarrow$-Code">Math $\Rightarrow$ Code<a class="anchor-link" href="#Math-$\Rightarrow$-Code">¶</a></h2><p>At Birchbox, I programmed and solved a number of optimization problems, and I had the luxury to use <a href="http://www.gurobi.com/">Gurobi</a>, a state of the art mixed-integer programming solver with API's in many languages. What does that mean? That means you can build your problem in the language of your choice, the API's will translate your code into whatever Gurobi likes as input (C?), and then the Gurobi solver will solve the problem. Gurobi is most definitely not free, so I won't use it in this blog post on the off chance that you want to program along. Instead, we'll use <a href="https://www.gnu.org/software/glpk/">GLPK</a> as our solver and <a href="https://pythonhosted.org/PuLP/">pulp</a> as the Python API. I've included instructions for installing both libraries on Linux at the bottom of this post.</p>
+<p>$$\forall\, j,\, c_{j} \geq r_{j} $$</p>
+<p>By the way, that means "for all $j$, $c_{j}$ is greater than or equal to $r_{j}$". We can lastly deal with the limited "supplies" for building collars by assuming that $m_{i}$ is the max quantity of supply $i$. If each collar $j$ requires $s_{ji}$ quantity of supply $i$, then the limited supplies constraint is written</p>
+<p>$$\forall\, i,\, \sum\limits_{j}s_{ij} \leq m_{i}$$</p>
+<h2 id="Math-$\Rightarrow$-Code">Math $\Rightarrow$ Code<a class="anchor-link" href="#Math-$\Rightarrow$-Code">&#182;</a></h2><p>At Birchbox, I programmed and solved a number of optimization problems, and I had the luxury to use <a href="http://www.gurobi.com/">Gurobi</a>, a state of the art mixed-integer programming solver with API's in many languages. What does that mean? That means you can build your problem in the language of your choice, the API's will translate your code into whatever Gurobi likes as input (C?), and then the Gurobi solver will solve the problem. Gurobi is most definitely not free, so I won't use it in this blog post on the off chance that you want to program along. Instead, we'll use <a href="https://www.gnu.org/software/glpk/">GLPK</a> as our solver and <a href="https://pythonhosted.org/PuLP/">pulp</a> as the Python API. I've included instructions for installing both libraries on Linux at the bottom of this post.</p>
 <p>We'll start by importing our libraries and placing some made up data into two dataframes to get an idea of how the data's organized. The columns with material names are assumed to denote the "quantity" that the collar requires. For the sake of just trying to learn something, let's ignore what "0.70 metal" might mean and move along.</p>
+
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In [1]:</div>
+<div class="prompt input_prompt">In&nbsp;[1]:</div>
 <div class="inner_cell">
-<div class="input_area">
+    <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="kn">from</span> <span class="nn">pulp</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 </pre></div>
+
 </div>
 </div>
 </div>
+
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In [2]:</div>
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
 <div class="inner_cell">
-<div class="input_area">
-<div class=" highlight hl-ipython2"><pre><span></span><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'leather'</span><span class="p">,</span> <span class="s1">'metal'</span><span class="p">,</span> <span class="s1">'canvas'</span><span class="p">,</span> <span class="s1">'cost'</span><span class="p">,</span> <span class="s1">'profit'</span><span class="p">,</span> <span class="s1">'min_run_size'</span><span class="p">]</span>
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;leather&#39;</span><span class="p">,</span> <span class="s1">&#39;metal&#39;</span><span class="p">,</span> <span class="s1">&#39;canvas&#39;</span><span class="p">,</span> <span class="s1">&#39;cost&#39;</span><span class="p">,</span> <span class="s1">&#39;profit&#39;</span><span class="p">,</span> <span class="s1">&#39;min_run_size&#39;</span><span class="p">]</span>
 <span class="n">collars</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([(</span><span class="mf">0.50</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.30</span><span class="p">,</span> <span class="mf">26.00</span><span class="p">,</span> <span class="mf">10.50</span><span class="p">,</span> <span class="mi">30</span><span class="p">),</span>
                         <span class="p">(</span><span class="mf">0.30</span><span class="p">,</span> <span class="mf">0.70</span><span class="p">,</span> <span class="mf">1.20</span><span class="p">,</span> <span class="mf">29.00</span><span class="p">,</span> <span class="mf">12.00</span><span class="p">,</span> <span class="mi">40</span><span class="p">),</span>
                         <span class="p">(</span><span class="mf">0.90</span><span class="p">,</span> <span class="mf">0.60</span><span class="p">,</span> <span class="mf">0.57</span><span class="p">,</span> <span class="mf">22.00</span><span class="p">,</span> <span class="mf">09.00</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span>
                         <span class="p">(</span><span class="mf">1.10</span><span class="p">,</span> <span class="mf">0.45</span><span class="p">,</span> <span class="mf">0.98</span><span class="p">,</span> <span class="mf">26.50</span><span class="p">,</span> <span class="mf">11.50</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
                         <span class="p">(</span><span class="mf">0.75</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.55</span><span class="p">,</span> <span class="mf">20.00</span><span class="p">,</span> <span class="mf">08.50</span><span class="p">,</span> <span class="mi">50</span><span class="p">)],</span>
                       <span class="n">columns</span><span class="o">=</span><span class="n">names</span><span class="p">)</span>
-<span class="n">collars</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">'Dog collar type'</span>
+<span class="n">collars</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Dog collar type&#39;</span>
 <span class="n">collars</span>
 </pre></div>
+
 </div>
 </div>
 </div>
+
 <div class="output_wrapper">
 <div class="output">
+
+
 <div class="output_area">
+
 <div class="prompt output_prompt">Out[2]:</div>
+
+
+
 <div class="output_html rendered_html output_subarea output_execute_result">
 <div>
 <table border="1" class="dataframe">
-<thead>
-<tr style="text-align: right;">
-<th></th>
-<th>leather</th>
-<th>metal</th>
-<th>canvas</th>
-<th>cost</th>
-<th>profit</th>
-<th>min_run_size</th>
-</tr>
-<tr>
-<th>Dog collar type</th>
-<th></th>
-<th></th>
-<th></th>
-<th></th>
-<th></th>
-<th></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<th>0</th>
-<td>0.50</td>
-<td>0.25</td>
-<td>0.30</td>
-<td>26.0</td>
-<td>10.5</td>
-<td>30</td>
-</tr>
-<tr>
-<th>1</th>
-<td>0.30</td>
-<td>0.70</td>
-<td>1.20</td>
-<td>29.0</td>
-<td>12.0</td>
-<td>40</td>
-</tr>
-<tr>
-<th>2</th>
-<td>0.90</td>
-<td>0.60</td>
-<td>0.57</td>
-<td>22.0</td>
-<td>9.0</td>
-<td>25</td>
-</tr>
-<tr>
-<th>3</th>
-<td>1.10</td>
-<td>0.45</td>
-<td>0.98</td>
-<td>26.5</td>
-<td>11.5</td>
-<td>60</td>
-</tr>
-<tr>
-<th>4</th>
-<td>0.75</td>
-<td>0.95</td>
-<td>0.55</td>
-<td>20.0</td>
-<td>8.5</td>
-<td>50</td>
-</tr>
-</tbody>
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>leather</th>
+      <th>metal</th>
+      <th>canvas</th>
+      <th>cost</th>
+      <th>profit</th>
+      <th>min_run_size</th>
+    </tr>
+    <tr>
+      <th>Dog collar type</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.50</td>
+      <td>0.25</td>
+      <td>0.30</td>
+      <td>26.0</td>
+      <td>10.5</td>
+      <td>30</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.30</td>
+      <td>0.70</td>
+      <td>1.20</td>
+      <td>29.0</td>
+      <td>12.0</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.90</td>
+      <td>0.60</td>
+      <td>0.57</td>
+      <td>22.0</td>
+      <td>9.0</td>
+      <td>25</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1.10</td>
+      <td>0.45</td>
+      <td>0.98</td>
+      <td>26.5</td>
+      <td>11.5</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0.75</td>
+      <td>0.95</td>
+      <td>0.55</td>
+      <td>20.0</td>
+      <td>8.5</td>
+      <td>50</td>
+    </tr>
+  </tbody>
 </table>
 </div>
 </div>
+
+</div>
+
 </div>
 </div>
-</div>
+
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In [3]:</div>
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
 <div class="inner_cell">
-<div class="input_area">
+    <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="n">quants</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="mi">400</span><span class="p">,</span> <span class="mi">250</span><span class="p">,</span> <span class="mi">300</span><span class="p">],</span>
-                      <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">'leather'</span><span class="p">,</span> <span class="s1">'metal'</span><span class="p">,</span> <span class="s1">'canvas'</span><span class="p">],</span>
-                      <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">'max_quantity'</span><span class="p">])</span>
+                      <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;leather&#39;</span><span class="p">,</span> <span class="s1">&#39;metal&#39;</span><span class="p">,</span> <span class="s1">&#39;canvas&#39;</span><span class="p">],</span>
+                      <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;max_quantity&#39;</span><span class="p">])</span>
 <span class="n">quants</span>
 </pre></div>
+
 </div>
 </div>
 </div>
+
 <div class="output_wrapper">
 <div class="output">
+
+
 <div class="output_area">
+
 <div class="prompt output_prompt">Out[3]:</div>
+
+
+
 <div class="output_html rendered_html output_subarea output_execute_result">
 <div>
 <table border="1" class="dataframe">
-<thead>
-<tr style="text-align: right;">
-<th></th>
-<th>max_quantity</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<th>leather</th>
-<td>400</td>
-</tr>
-<tr>
-<th>metal</th>
-<td>250</td>
-</tr>
-<tr>
-<th>canvas</th>
-<td>300</td>
-</tr>
-</tbody>
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>max_quantity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>leather</th>
+      <td>400</td>
+    </tr>
+    <tr>
+      <th>metal</th>
+      <td>250</td>
+    </tr>
+    <tr>
+      <th>canvas</th>
+      <td>300</td>
+    </tr>
+  </tbody>
 </table>
 </div>
 </div>
+
+</div>
+
 </div>
 </div>
-</div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>We now define variables from the dataframes that match the math from above.</p>
+
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In [4]:</div>
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
 <div class="inner_cell">
-<div class="input_area">
+    <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="n">p</span> <span class="o">=</span> <span class="n">collars</span><span class="o">.</span><span class="n">profit</span>
 <span class="n">w</span> <span class="o">=</span> <span class="n">collars</span><span class="o">.</span><span class="n">cost</span>
 <span class="n">r</span> <span class="o">=</span> <span class="n">collars</span><span class="o">.</span><span class="n">min_run_size</span>
 <span class="n">m</span> <span class="o">=</span> <span class="n">quants</span><span class="o">.</span><span class="n">max_quantity</span>
-<span class="n">s</span> <span class="o">=</span> <span class="n">collars</span><span class="p">[[</span><span class="s1">'leather'</span><span class="p">,</span> <span class="s1">'metal'</span><span class="p">,</span> <span class="s1">'canvas'</span><span class="p">]]</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">collars</span><span class="p">[[</span><span class="s1">&#39;leather&#39;</span><span class="p">,</span> <span class="s1">&#39;metal&#39;</span><span class="p">,</span> <span class="s1">&#39;canvas&#39;</span><span class="p">]]</span>
 <span class="n">collar_index</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">collars</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="c1"># j</span>
 <span class="n">material_index</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="c1"># i</span>
 <span class="n">budget</span> <span class="o">=</span> <span class="mf">10000.0</span>
 </pre></div>
+
 </div>
 </div>
 </div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>The rest of the code follows exactly as we thought of the original math. We first think of the objective function. We know that we want to maximize profit, so we instantiate a maximization <code>LpProblem</code>. We then build the <em>variables</em> in our problem. I always confuse the term "variable" with any of the letters/symbols in our math problem, but we really mean a quantity that is variable (changes value, not the constants). The only variable is $c_{j}$, the number of collar $j$ to build. Using pulp, we can create $c_{j}$ variables with some pre-provided domain knowledge: We know that $c_{j}$ must be an integer. We also know that we cannot build more collars than our budget allows, so let's save our solver some time by passing an upper bound. Lastly, we add the objective function to the problem using the newly created variable. For taking sums in pulp, you should use the <code>lpSum</code> function.</p>
+
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In [5]:</div>
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
 <div class="inner_cell">
-<div class="input_area">
-<div class=" highlight hl-ipython2"><pre><span></span><span class="n">prob</span> <span class="o">=</span> <span class="n">LpProblem</span><span class="p">(</span><span class="s1">'Dog Collar Problem'</span><span class="p">,</span> <span class="n">LpMaximize</span><span class="p">)</span>
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="n">prob</span> <span class="o">=</span> <span class="n">LpProblem</span><span class="p">(</span><span class="s1">&#39;Dog Collar Problem&#39;</span><span class="p">,</span> <span class="n">LpMaximize</span><span class="p">)</span>
 <span class="c1"># Collar counts (the variable in our problem)</span>
 <span class="n">c</span> <span class="o">=</span> <span class="p">[]</span>
 
 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">collar_index</span><span class="p">:</span>
     <span class="n">max_count</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">budget</span> <span class="o">/</span> <span class="n">w</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
-    <span class="n">c</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LpVariable</span><span class="p">(</span><span class="s1">'c_{}'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">),</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LpVariable</span><span class="p">(</span><span class="s1">&#39;c_{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">),</span>
                         <span class="n">lowBound</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                         <span class="n">upBound</span><span class="o">=</span><span class="n">max_count</span><span class="p">,</span>
-                        <span class="n">cat</span><span class="o">=</span><span class="s1">'Integer'</span><span class="p">))</span>
+                        <span class="n">cat</span><span class="o">=</span><span class="s1">&#39;Integer&#39;</span><span class="p">))</span>
     
 <span class="c1"># For pulp, add objective function first</span>
-<span class="n">prob</span> <span class="o">+=</span> <span class="n">lpSum</span><span class="p">([</span><span class="n">i</span> <span class="o">*</span> <span class="n">j</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">c</span><span class="p">)]),</span> <span class="s1">'Total profit'</span>
+<span class="n">prob</span> <span class="o">+=</span> <span class="n">lpSum</span><span class="p">([</span><span class="n">i</span> <span class="o">*</span> <span class="n">j</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">c</span><span class="p">)]),</span> <span class="s1">&#39;Total profit&#39;</span>
 </pre></div>
+
 </div>
 </div>
 </div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>The constraints can now be added to the problem. The inequalities are written just as they would in math. A good rule of thumb is to use an explicit for loop any time we have a $\forall$ in our math.</p>
+
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In [6]:</div>
+<div class="prompt input_prompt">In&nbsp;[6]:</div>
 <div class="inner_cell">
-<div class="input_area">
+    <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Budget constraint</span>
-<span class="n">prob</span> <span class="o">+=</span> <span class="n">lpSum</span><span class="p">([</span><span class="n">w</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">collar_index</span><span class="p">])</span> <span class="o"><=</span> <span class="n">budget</span><span class="p">,</span> <span class="s1">'Budget'</span>
+<span class="n">prob</span> <span class="o">+=</span> <span class="n">lpSum</span><span class="p">([</span><span class="n">w</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">collar_index</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="n">budget</span><span class="p">,</span> <span class="s1">&#39;Budget&#39;</span>
 
 <span class="c1"># Min run size constraint</span>
 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">collar_index</span><span class="p">:</span>
-    <span class="n">prob</span> <span class="o">+=</span> <span class="n">c</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">>=</span> <span class="n">r</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="s1">'MinBatchSize_{}'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+    <span class="n">prob</span> <span class="o">+=</span> <span class="n">c</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">r</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="s1">&#39;MinBatchSize_{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
 
 <span class="c1"># Max supplies quantity</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">material_index</span><span class="p">:</span>
-    <span class="n">prob</span> <span class="o">+=</span> <span class="n">lpSum</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">collar_index</span><span class="p">])</span> <span class="o"><=</span> <span class="n">m</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="n">prob</span> <span class="o">+=</span> <span class="n">lpSum</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">collar_index</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="n">m</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 </pre></div>
+
 </div>
 </div>
 </div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Our variables are created, our objective is defined, and all constraints have been added. What's left? Solve!</p>
+
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In [7]:</div>
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
 <div class="inner_cell">
-<div class="input_area">
+    <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
 </pre></div>
+
 </div>
 </div>
 </div>
+
 <div class="output_wrapper">
 <div class="output">
+
+
 <div class="output_area">
+
 <div class="prompt output_prompt">Out[7]:</div>
+
+
+
+
 <div class="output_text output_subarea output_execute_result">
 <pre>1</pre>
 </div>
+
+</div>
+
 </div>
 </div>
-</div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>We returned a 1 which means that the problem solved. The pulp documentation provides some <a href="https://pythonhosted.org/PuLP/CaseStudies/index.html">examples</a> of how to inspect the solved model which I've repurposed below</p>
+
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In [8]:</div>
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
-<div class="input_area">
-<div class=" highlight hl-ipython2"><pre><span></span><span class="k">print</span><span class="p">(</span><span class="s2">"Status: {}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LpStatus</span><span class="p">[</span><span class="n">prob</span><span class="o">.</span><span class="n">status</span><span class="p">]))</span>
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="k">print</span><span class="p">(</span><span class="s2">&quot;Status: {}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LpStatus</span><span class="p">[</span><span class="n">prob</span><span class="o">.</span><span class="n">status</span><span class="p">]))</span>
 
-<span class="c1"># Each of the variables is printed with it's resolved optimum value</span>
+<span class="c1"># Each of the variables is printed with it&#39;s resolved optimum value</span>
 <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">prob</span><span class="o">.</span><span class="n">variables</span><span class="p">():</span>
-    <span class="k">print</span><span class="p">(</span><span class="s2">"{} = {} "</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">varValue</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;{} = {} &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">varValue</span><span class="p">))</span>
 
 <span class="c1"># The optimised objective function value is printed to the screen</span>
-<span class="k">print</span><span class="p">(</span><span class="s1">'Total profit = ${:6.2f}'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">(</span><span class="n">prob</span><span class="o">.</span><span class="n">objective</span><span class="p">)))</span>
-<span class="k">print</span><span class="p">(</span><span class="s1">'Total cost = ${:6.2f}'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">v</span><span class="o">.</span><span class="n">varValue</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">prob</span><span class="o">.</span><span class="n">variables</span><span class="p">()))))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Total profit = ${:6.2f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">(</span><span class="n">prob</span><span class="o">.</span><span class="n">objective</span><span class="p">)))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Total cost = ${:6.2f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">v</span><span class="o">.</span><span class="n">varValue</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">prob</span><span class="o">.</span><span class="n">variables</span><span class="p">()))))</span>
 </pre></div>
+
 </div>
 </div>
 </div>
+
 <div class="output_wrapper">
 <div class="output">
+
+
 <div class="output_area">
+
 <div class="prompt"></div>
+
+
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Status: Optimal
 c_0 = 68.0 
@@ -1356,14 +1417,17 @@ Total cost = $9999.50
 </pre>
 </div>
 </div>
+
 </div>
 </div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Awesome! You now know how to solve simple optimization problems in Python. There are many more details that could be covered (constraints on the max of an array, if-else statement constraints, etc...), but hopefully this whet your appetite to play a little on your own.</p>
+
 </div>
 </div>
 </div>
@@ -1371,10 +1435,10 @@ Total cost = $9999.50
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="INSTALLATION-NOTES">INSTALLATION NOTES<a class="anchor-link" href="#INSTALLATION-NOTES">¶</a></h2><p>You will need to install GLPK and pulp The following instructions worked for me on Ubuntu 14.04 using Anaconda.</p>
-<h4 id="GLPK">GLPK<a class="anchor-link" href="#GLPK">¶</a></h4><div class="highlight"><pre><span></span>sudo apt-get install glpk-utils
+<h2 id="INSTALLATION-NOTES">INSTALLATION NOTES<a class="anchor-link" href="#INSTALLATION-NOTES">&#182;</a></h2><p>You will need to install GLPK and pulp The following instructions worked for me on Ubuntu 14.04 using Anaconda.</p>
+<h4 id="GLPK">GLPK<a class="anchor-link" href="#GLPK">&#182;</a></h4><div class="highlight"><pre><span></span>sudo apt-get install glpk-utils
 </pre></div>
-<h4 id="pulp">pulp<a class="anchor-link" href="#pulp">¶</a></h4><p>There is no default conda channel. I used the following channel which seemed to work fine. Note: this did not work with python 3.</p>
+<h4 id="pulp">pulp<a class="anchor-link" href="#pulp">&#182;</a></h4><p>There is no default conda channel. I used the following channel which seemed to work fine. Note: this did not work with python 3.</p>
 <div class="highlight"><pre><span></span>conda install --channel https://conda.anaconda.org/timcera pulp
 </pre></div>
 <p>You can test the installation by opening python and running the following test</p>
@@ -1382,6 +1446,7 @@ Total cost = $9999.50
 <span class="n">pulp</span><span class="o">.</span><span class="n">pulpTestAll</span><span class="p">()</span>
 </pre></div>
 <p>You should expect to fail some of the tests if you don't have CPLEX, COIN, Gurobi, etc... However, the GLPK tests should work. I saw the following printout (I only have GLPK installed on my home computer)</p>
+
 <pre><code>     Testing zero subtraction
      Testing inconsistant lp solution
      Testing continuous LP solution
@@ -1442,9 +1507,12 @@ Solver pulp.solvers.GUROBI unavailable
 Solver pulp.solvers.GUROBI_CMD unavailable
 Solver pulp.solvers.PYGLPK unavailable
 Solver pulp.solvers.YAPOSIB unavailable</code></pre>
+
 </div>
 </div>
 </div>
+ 
+
 
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var mathjaxscript = document.createElement('script');
