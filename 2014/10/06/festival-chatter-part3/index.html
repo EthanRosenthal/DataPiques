@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="google-site-verification" content="CLAZwNRfx6oIwU-FwsUMBEOhwd64lMXSyfkvuubm_kg" />
     <title>Data Piques | Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension</title>
-    <link rel="shortcut icon" type="image/png" href="http://blog.ethanrosenthal.com/favicon.png">
-    <link rel="shortcut icon" type="image/x-icon" href="http://blog.ethanrosenthal.com/favicon.ico">
-    <link href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Full Atom Feed" />
-    <link href="http://blog.ethanrosenthal.com/feeds/misc.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Categories Atom Feed" />
-    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/screen.css" type="text/css" />
-    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/print.css" type="text/css" media="print" />
+    <link rel="shortcut icon" type="image/png" href="https://blog.ethanrosenthal.com/favicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="https://blog.ethanrosenthal.com/favicon.ico">
+    <link href="https://blog.ethanrosenthal.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Full Atom Feed" />
+    <link href="https://blog.ethanrosenthal.com/feeds/misc.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Categories Atom Feed" />
+    <link rel="stylesheet" href="https://blog.ethanrosenthal.com/theme/css/screen.css" type="text/css" />
+    <link rel="stylesheet" href="https://blog.ethanrosenthal.com/theme/css/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="https://blog.ethanrosenthal.com/theme/css/print.css" type="text/css" media="print" />
 
 <!--     <script type="text/javascript" async
       src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML">
@@ -23,14 +23,14 @@
     <header>
         <nav>
             <ul>
-                <li><a href="http://blog.ethanrosenthal.com">Home</a></li>
+                <li><a href="https://blog.ethanrosenthal.com">Home</a></li>
                 <li><a href="/archives.html">Archives</a></li>
                 <li><a href="/pages/about.html">About</a></li>
                 <li><a href="http://www.ethanrosenthal.com">Website</a></li>
             </ul>
         </nav>
         <div class="header_box">
-            <h1><a href="http://blog.ethanrosenthal.com">Data Piques</a></h1>
+            <h1><a href="https://blog.ethanrosenthal.com">Data Piques</a></h1>
         </div>
     </header>
     <div id="wrapper">
@@ -38,12 +38,12 @@
 
             <article class="post">
                 <h2 class="title">
-                    <a href="http://blog.ethanrosenthal.com/2014/10/06/festival-chatter-part3/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension&quot;">Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension</a>
+                    <a href="https://blog.ethanrosenthal.com/2014/10/06/festival-chatter-part3/" rel="bookmark" title="Permanent Link to &quot;Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension&quot;">Festival Chatter (Part 3) - Bonnaroo Analysis in the Fourth Dimension</a>
                 </h2>
 
-                <p>In this series of posts (<a href="http://blog.ethanrosenthal.com/2014/08/31/festival-chatter-part1/">part 1</a>, <a href="http://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/">part 2</a>), I have been showing how to use Python and other data scientist tools to analyze a collection of tweets related to the 2014 Bonnaroo Music and Arts Festival. So far, the investigation has been limited to summary data of the full dataset. The beauty of Twitter is that it occurs in realtime, so we can now peer into the fourth dimension and learn about these tweets as a function of time.</p>
+                <p>In this series of posts (<a href="https://blog.ethanrosenthal.com/2014/08/31/festival-chatter-part1/">part 1</a>, <a href="https://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/">part 2</a>), I have been showing how to use Python and other data scientist tools to analyze a collection of tweets related to the 2014 Bonnaroo Music and Arts Festival. So far, the investigation has been limited to summary data of the full dataset. The beauty of Twitter is that it occurs in realtime, so we can now peer into the fourth dimension and learn about these tweets as a function of time.</p>
 <h2>More Organic</h2>
-<p>Before we view the Bonnaroo tweets as a time series, I would like to make a quick comment about the organic-ness of the tweets. If you recall from the previous <a href="http://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/">post</a>, I removed duplicates and retweets from my collection in order to make the tweet database more indicative of true audience reactions. On further investigation, it seems that there were many spammy media sources still in the collection. To make the tweets even more organic, I decided to look at the source of the tweets.</p>
+<p>Before we view the Bonnaroo tweets as a time series, I would like to make a quick comment about the organic-ness of the tweets. If you recall from the previous <a href="https://blog.ethanrosenthal.com/2014/09/09/festival-chatter-part2/">post</a>, I removed duplicates and retweets from my collection in order to make the tweet database more indicative of true audience reactions. On further investigation, it seems that there were many spammy media sources still in the collection. To make the tweets even more organic, I decided to look at the source of the tweets.</p>
 <p>Because Kanye West was the most popular artist from the previous posts' analysis, I decided to look at the top 15 sources that mentioned him:</p>
 <div class="highlight"><pre><span></span>twitterfeed                    1585
 dlvr.it                         749
@@ -71,7 +71,7 @@ TweetAdder v4                    37
 
 
 <p>With this new dataset, I re-ran the band popularity histogram from the previous post, and I was surprised to see that Kanye got bumped down to third place! It looks like Kanye's popular with the media, but Jack White and Elton John were more popular with the Bonnaroo audience.</p>
-<p><img alt="New Top Ten Bands" src="http://blog.ethanrosenthal.com/assets/img/bandPop_top10_orig_sources.png"></p>
+<p><img alt="New Top Ten Bands" src="https://blog.ethanrosenthal.com/assets/img/bandPop_top10_orig_sources.png"></p>
 <h2>4th Dimensional <a href="http://youtu.be/5vwV6htrjVY">Transition</a></h2>
 <p>Let's now look at the time dependence of the tweets. For this, we would like to use the <code>created_at</code> field as our index and tell pandas to treat its elements as datetime objects.</p>
 <div class="highlight"><pre><span></span><span class="c1"># Clean up field</span>
@@ -107,7 +107,7 @@ TweetAdder v4                    37
 </pre></div>
 
 
-<p><img alt="Tweets per Hour" src="http://blog.ethanrosenthal.com/assets/img/tweet_count_ts.png"></p>
+<p><img alt="Tweets per Hour" src="https://blog.ethanrosenthal.com/assets/img/tweet_count_ts.png"></p>
 <p>As you can see, tweet frequency was pretty consistent during each day of the festival and persisted until the early hours of each morning.</p>
 <h2>Band Popularity Time Series</h2>
 <p>We can now go back to questions from the previous post and look at how the top five bands' popularity changed with time. Using my program from the previous post, <code>buildMentionHist</code>, we can add a column for each band to our existing <code>organics</code> dataframe. Each row of the bands' columns will contain a True or False value corresponding to whether or not the artist was mentioned in the tweet. We resample the columns like above but do this in bins of 10 minutes.</p>
@@ -165,9 +165,9 @@ TweetAdder v4                    37
 
 
 <p>Here is the full time series:</p>
-<p><img alt="Top Five TS Popularity" src="http://blog.ethanrosenthal.com/assets/img/topfive_tweet_ts.png"></p>
+<p><img alt="Top Five TS Popularity" src="https://blog.ethanrosenthal.com/assets/img/topfive_tweet_ts.png"></p>
 <p>And here is the zoomed-in time series:</p>
-<p><img alt="Top Five TS Popularity Zoom" src="http://blog.ethanrosenthal.com/assets/img/topfive_tweet_ts_zoom.png"></p>
+<p><img alt="Top Five TS Popularity Zoom" src="https://blog.ethanrosenthal.com/assets/img/topfive_tweet_ts_zoom.png"></p>
 <p>If we look at when each band went on stage, we can see that each bands' popularity spiked while they were performing. This is good - it looks like we are measuring truly "organic" interest on Twitter!</p>
 <table>
 <thead>
@@ -287,22 +287,22 @@ TweetAdder v4                    37
 </pre></div>
 
 
-<p><img alt="Word Frequency Distribution" src="http://blog.ethanrosenthal.com/assets/img/token_freq.png"></p>
+<p><img alt="Word Frequency Distribution" src="https://blog.ethanrosenthal.com/assets/img/token_freq.png"></p>
 <p>A couple things caught my eye - the first being that people like to talk about themseleves (see popularity of " i'm "). Also it was pretty popular to misspell "Bonnaroo" (see popularity of " bonaroo "). I wanted to see if there was any correlation between mispellings and maybe people being intoxicated at night, but the time series behavior of the mispellings looks similar in shape (though not magnitude) to the full tweet time series that is plotted earlier in the post.</p>
 <div class="highlight"><pre><span></span><span class="n">misspell</span> <span class="o">=</span> <span class="n">token_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;bonaroo&#39;</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span>
 <span class="n">misspell</span> <span class="o">=</span> <span class="n">misspell</span><span class="p">[</span><span class="n">misspell</span><span class="p">]</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s1">&#39;60t&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;count&#39;</span><span class="p">)</span>
 </pre></div>
 
 
-<p><img alt="Misspelling Time Series" src="http://blog.ethanrosenthal.com/assets/img/misspell_bonaroo_ts.png"></p>
+<p><img alt="Misspelling Time Series" src="https://blog.ethanrosenthal.com/assets/img/misspell_bonaroo_ts.png"></p>
 <p>The other thing that interested me was the the word "best" was one of the top 25 most frequent words. Assuming that "best" correlates with happiness, we can see that people got happier and happier as the festival progressed:</p>
-<p><img alt="&quot;Best&quot; Time Series" src="http://blog.ethanrosenthal.com/assets/img/best_ts.png"></p>
+<p><img alt="&quot;Best&quot; Time Series" src="https://blog.ethanrosenthal.com/assets/img/best_ts.png"></p>
 <p>This is, of course, a fairly simplistic measure of text sentiment. In my next post, I would like to quantify more robust measures of Bonnaroo audience sentiment.</p>
 <p>By the way, the code used in this whole series on Bonnaroo is available on my <a href="https://github.com/EthanRosenthal/festival-chatter">GitHub</a>.</p>
                 <div class="clear"></div>
 
                 <div class="info">
-                    <a href="http://blog.ethanrosenthal.com/2014/10/06/festival-chatter-part3/">posted on Oct 06, 2014</a>
+                    <a href="https://blog.ethanrosenthal.com/2014/10/06/festival-chatter-part3/">posted on Oct 06, 2014</a>
                 </div>
             </article><style type="text/css">
 {
@@ -364,7 +364,7 @@ pre code {
                 &middot;
                 Powered by <a href="http://getpelican.com">Pelican</a>
                 &middot;
-                <a href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" rel="alternate">Atom Feed</a>
+                <a href="https://blog.ethanrosenthal.com/feeds/all.atom.xml" rel="alternate">Atom Feed</a>
             </footer>
         </div>
         <div class="clear"></div>

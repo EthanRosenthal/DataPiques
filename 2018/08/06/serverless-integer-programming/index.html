@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="google-site-verification" content="CLAZwNRfx6oIwU-FwsUMBEOhwd64lMXSyfkvuubm_kg" />
     <title>Data Piques | Quick and Dirty Serverless Integer Programming</title>
-    <link rel="shortcut icon" type="image/png" href="http://blog.ethanrosenthal.com/favicon.png">
-    <link rel="shortcut icon" type="image/x-icon" href="http://blog.ethanrosenthal.com/favicon.ico">
-    <link href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Full Atom Feed" />
-    <link href="http://blog.ethanrosenthal.com/feeds/misc.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Categories Atom Feed" />
-    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/screen.css" type="text/css" />
-    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="http://blog.ethanrosenthal.com/theme/css/print.css" type="text/css" media="print" />
+    <link rel="shortcut icon" type="image/png" href="https://blog.ethanrosenthal.com/favicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="https://blog.ethanrosenthal.com/favicon.ico">
+    <link href="https://blog.ethanrosenthal.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Full Atom Feed" />
+    <link href="https://blog.ethanrosenthal.com/feeds/misc.atom.xml" type="application/atom+xml" rel="alternate" title="Data Piques Categories Atom Feed" />
+    <link rel="stylesheet" href="https://blog.ethanrosenthal.com/theme/css/screen.css" type="text/css" />
+    <link rel="stylesheet" href="https://blog.ethanrosenthal.com/theme/css/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="https://blog.ethanrosenthal.com/theme/css/print.css" type="text/css" media="print" />
 
 <!--     <script type="text/javascript" async
       src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML">
@@ -23,14 +23,14 @@
     <header>
         <nav>
             <ul>
-                <li><a href="http://blog.ethanrosenthal.com">Home</a></li>
+                <li><a href="https://blog.ethanrosenthal.com">Home</a></li>
                 <li><a href="/archives.html">Archives</a></li>
                 <li><a href="/pages/about.html">About</a></li>
                 <li><a href="http://www.ethanrosenthal.com">Website</a></li>
             </ul>
         </nav>
         <div class="header_box">
-            <h1><a href="http://blog.ethanrosenthal.com">Data Piques</a></h1>
+            <h1><a href="https://blog.ethanrosenthal.com">Data Piques</a></h1>
         </div>
     </header>
     <div id="wrapper">
@@ -38,7 +38,7 @@
 
             <article class="post">
                 <h2 class="title">
-                    <a href="http://blog.ethanrosenthal.com/2018/08/06/serverless-integer-programming/" rel="bookmark" title="Permanent Link to &quot;Quick and Dirty Serverless Integer Programming&quot;">Quick and Dirty Serverless Integer Programming</a>
+                    <a href="https://blog.ethanrosenthal.com/2018/08/06/serverless-integer-programming/" rel="bookmark" title="Permanent Link to &quot;Quick and Dirty Serverless Integer Programming&quot;">Quick and Dirty Serverless Integer Programming</a>
                 </h2>
 
                 <style type="text/css">/*!
@@ -1043,7 +1043,7 @@ h6:hover .anchor-link {
 <p>Google Sheets</p>
 <h2 id="Datasheets">Datasheets<a class="anchor-link" href="#Datasheets">&#182;</a></h2><p>Thankfully, <a href="https://www.squarespace.com/">Squarespace</a> created <a href="https://datasheets.readthedocs.io/en/latest/">datasheets</a>. This is a nice library that makes interactions between <code>pandas</code> and Google Sheets impressively painless. The library is worth it for the detailed <a href="https://datasheets.readthedocs.io/en/latest/getting_oauth_credentials.html">OAuth page</a> alone (I once spent 2 weeks struggling with Google OAuth pain and <em>really</em> wish this page had existed at that time). What's particularly nice about the OAuth page is that it walks through setting up a <em>service account</em> which does not require the end-user to go through the typical OAuth dance of browser redirects to and from the Google login page. This is nce because these redirects can get messed up when moving from local development to production systems in the cloud (or at least they always get messed up when I try to do it!).</p>
 <p>Anywho, the first step was to setup my Google Sheets credentials and download the <code>client_secrets.json</code> and <code>service_key.json</code> files. With these handy, I can now access my Google Sheets spreadsheet using <code>datasheets</code>. The spreadsheet is named <code>FML</code>, and the <code>inputs</code> tab looks like</p>
-<p><a href="/assets/img/fml/inputs.png"><img src="http://blog.ethanrosenthal.com/assets/img/fml/inputs.png" alt="inputs"></a></p>
+<p><a href="/assets/img/fml/inputs.png"><img src="https://blog.ethanrosenthal.com/assets/img/fml/inputs.png" alt="inputs"></a></p>
 <p>We can pull this into a pandas DataFrame by setting some <code>datasheets</code> environment variables to point to our credentials and then creating a <code>Client</code></p>
 
 </div>
@@ -1233,7 +1233,7 @@ h6:hover .anchor-link {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Allocating-Movies">Allocating Movies<a class="anchor-link" href="#Allocating-Movies">&#182;</a></h2><p>I've <a href="http://blog.ethanrosenthal.com/2016/07/20/lets-talk-or/">written</a> <a href="http://blog.ethanrosenthal.com/2016/08/30/towards-optimal-personalization/">previously</a> about integer programming in Python using the <a href="https://pythonhosted.org/PuLP/">PuLP</a> package, so I will avoid the introductions to integer programming and <code>pulp</code>. For this post, I will just quickly summarize the optimization problem, as it's reasonably simple!</p>
+<h2 id="Allocating-Movies">Allocating Movies<a class="anchor-link" href="#Allocating-Movies">&#182;</a></h2><p>I've <a href="https://blog.ethanrosenthal.com/2016/07/20/lets-talk-or/">written</a> <a href="https://blog.ethanrosenthal.com/2016/08/30/towards-optimal-personalization/">previously</a> about integer programming in Python using the <a href="https://pythonhosted.org/PuLP/">PuLP</a> package, so I will avoid the introductions to integer programming and <code>pulp</code>. For this post, I will just quickly summarize the optimization problem, as it's reasonably simple!</p>
 <p>We only have a single <em>decision variable</em> in our problem. In the code, I call this <code>movie_counts</code>. In math, we can call it $S_{m}$ which corresponds to how many screens we will play movie $m$ on for the weekend. This is an <em>integer</em> decision variable with a lower bound of 0 and an upper bound of 8 (the number of screens we have available in our fantasy movie theater). It is an integer variable because we cannot screen a movie on 2.5 screens.</p>
 <p>With our decision variable in hand, we must now define an objective function. We simply want to maximize expected revenue. Let's define a quantity $r_{m}$ which is the amount of money that we expect movie $m$ to bring in (this is the revenue column in the above DataFrame). Our objective function is then simply</p>
 <p>$$\sum_{m} r_{m} * S_{m}$$</p>
@@ -1270,7 +1270,7 @@ $$ \sum_{m} c_{m} * S_{m} \leq 1000 $$</li>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h2 id="Painless-Serverless">Painless Serverless<a class="anchor-link" href="#Painless-Serverless">&#182;</a></h2><p>The final step was to create a tiny Flask app with a button to launch the optimization. I made the simplest barebones site that I could, and then it was time to deploy.</p>
-<p><a href="/assets/img/fml/website.png"><img src="http://blog.ethanrosenthal.com/assets/img/fml/website.png" alt="website"></a></p>
+<p><a href="/assets/img/fml/website.png"><img src="https://blog.ethanrosenthal.com/assets/img/fml/website.png" alt="website"></a></p>
 <p><a href="https://github.com/Miserlou/Zappa">Zappa</a> is a ridiculously cool Python library that lets you run any Python application as an AWS Lambda function and make it all discoverable via API Gateway. What this means is that you can make a Python website and run it in the cloud without an actual server running the code (as long as your website runs quickly, and uses few resources). You only pay for each time the website runs, but the first million times per month are free. If my wife happens to run this more than 1 million times, then I'll happily pay money.</p>
 <p>I was blown away by how easy <code>Zappa</code> was to use. Honestly, the hardest part was figuring out how to install python 3.6 on my linux computer because you have to use <code>virtualenv</code> instead of <code>conda</code> (though there's a <a href="https://github.com/Miserlou/Zappa/pull/108">PR</a> to fix that).</p>
 <p>I'm just going to copy the documentation on how to get <code>Zappa</code> working because this is literally all that I had to do:</p>
@@ -1317,7 +1317,7 @@ $$ \sum_{m} c_{m} * S_{m} \leq 1000 $$</li>
                 <div class="clear"></div>
 
                 <div class="info">
-                    <a href="http://blog.ethanrosenthal.com/2018/08/06/serverless-integer-programming/">posted on Aug 06, 2018</a>
+                    <a href="https://blog.ethanrosenthal.com/2018/08/06/serverless-integer-programming/">posted on Aug 06, 2018</a>
                 </div>
             </article><style type="text/css">
 {
@@ -1379,7 +1379,7 @@ pre code {
                 &middot;
                 Powered by <a href="http://getpelican.com">Pelican</a>
                 &middot;
-                <a href="http://blog.ethanrosenthal.com/feeds/all.atom.xml" rel="alternate">Atom Feed</a>
+                <a href="https://blog.ethanrosenthal.com/feeds/all.atom.xml" rel="alternate">Atom Feed</a>
             </footer>
         </div>
         <div class="clear"></div>
